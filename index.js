@@ -87,7 +87,7 @@ export const makePing = async (address, count) => {
                         //console.log(packetsSent[0], packetsPercent[0])
 
                         pingStats['packetsSent'] = packetsSent[0]
-                        pingStats['packetsPercent'] = packetsPercent[1]
+                        pingStats['packetsPercent'] = packetsPercent[1].replace(',', '.')
                     }
 
 
@@ -153,6 +153,18 @@ const mainloop = async () => {
     } catch (error) {
         console.log(error)
     }
+
+    try {
+        await makePing(process.env.ROUTER_1, 6)
+    } catch (error) {
+        console.log(error)
+    }
+
+    try {
+        await makePing(process.env.ROUTER_2, 6)
+    } catch (error) {
+        console.log(error)
+    }
     
     try {
         await makeCurl('https://www.google.com')
@@ -171,6 +183,21 @@ const mainloop = async () => {
     } catch (error) {
         console.log(error)
     }
+
+    try {
+        await makeCurl(process.env.ROUTER_1)
+    } catch (error) {
+        console.log(error)
+    }
+
+    try {
+        await makeCurl(process.env.ROUTER_2)
+    } catch (error) {
+        console.log(error)
+    }
 }
 
+console.log('================= STARTING ================')
+const now = new Date()
+console.log(now.toString())
 mainloop()
