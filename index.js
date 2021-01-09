@@ -82,7 +82,7 @@ export const makePing = async (address, count) => {
                     }
 
                     const packetsSent = item.match(/^[0-9]+/)
-                    const packetsPercent = item.match(/([0-9]+)%/)
+                    const packetsPercent = item.match(/([0-9]*,{0,1}[0-9]+)%/)
                     if (packetsSent && packetsPercent) {
                         //console.log(packetsSent[0], packetsPercent[0])
 
