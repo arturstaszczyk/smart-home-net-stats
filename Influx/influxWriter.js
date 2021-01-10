@@ -13,8 +13,9 @@ export default class InfluxWriter {
     constructor() {
         this.influxDB = new InfluxDB(clientOptions)
         this.writeAPI = this.influxDB.getWriteApi('', bucket)
+        this.queryAPI = this.influxDB.getQueryApi('')
     }
-    
+
     storeMetrics(metric, tags, floadFields) {
         const point = new Point(metric)
 
@@ -35,5 +36,30 @@ export default class InfluxWriter {
         } catch (error) {
             console.log(error)
         }
+    }
+
+    getMetrics(metric, field, time) {
+
+        return new Promise((resolve, reject) => {
+
+            const result = []
+
+            const query = `from(bucket: "${bucket}") |> range(start: -${time}) |> filter(fn: (r) => r._measurement == "${metric}" and r._field == "${field}") |> last()`
+            this.queryAPI.queryRows(query, {
+                next(row, tableMeta) {
+                    const rowAsObject = tableMeta.toObject(row)
+                    result.push({
+                        [field]: rowAsObject._value
+                    })
+                },
+                error(error) {
+                    reject(error)
+                },
+                complete() {
+                    resolve(result)
+                }
+            })
+        })
+
     }
 }
