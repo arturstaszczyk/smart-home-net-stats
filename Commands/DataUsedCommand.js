@@ -26,6 +26,7 @@ export default class DataUsedCommand {
     execute(options) {
         const inetInterface = options.inetInterface || DEFAULT_INTERFACE
 
+        console.log('Starting execution of DataUsed command')
         return new Promise((resolve, reject) => {
 
             let metricName = null
