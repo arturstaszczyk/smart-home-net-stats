@@ -27,7 +27,11 @@ const mainloop = async () => {
     const outputs = []
 
     for (const commandDef of commands) {
-        outputs.push(await command(...commandDef))
+        try {
+            outputs.push(await command(...commandDef))
+        } catch (errorMetrics) {
+            outputs.push(errorMetrics)
+        }
     }
 
     console.log('--ALL COMMANDS EXECUTED')
