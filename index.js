@@ -1,12 +1,12 @@
 require('dotenv').config()
 
 import PingCommand from './Commands/PingCommand'
+import CurlCommand from './Commands/CurlCommand'
 import command from './Commands/command'
 import InfluxWriter from './Influx/influxWriter'
 import _ from 'lodash'
-import CurlCommand from './Commands/CurlCommand'
 
-const DEFAULT_PING_COUNT = 5
+const DEFAULT_PING_COUNT = 6
 
 const commands = [
     [PingCommand, { address: 'wp.pl', pingCount: DEFAULT_PING_COUNT }],
