@@ -14,7 +14,7 @@ export default class PingCommand {
         _.forEach(lines, (item) => {
 
             const packetsSent = item.match(/^[0-9]+/)
-            const packetsPercent = item.match(/([0-9]*,{0,1}[0-9]+)%/)
+            const packetsPercent = item.match(/([0-9]*[\.,]{0,1}[0-9]+)%/)
 
             if (packetsSent && packetsPercent) {
                 pingStats.packetsSent = packetsSent[0]
