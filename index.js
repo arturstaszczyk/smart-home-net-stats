@@ -10,16 +10,16 @@ import DataUsedCommand from './Commands/DataUsedCommand'
 const DEFAULT_PING_COUNT = 6
 
 const commands = [
-    // [PingCommand, { address: 'wp.pl', pingCount: DEFAULT_PING_COUNT }],
-    // [PingCommand, { address: 'pl.wikipedia.org', pingCount: DEFAULT_PING_COUNT }],
-    // [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT }],
-    // [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT }],
-    // [PingCommand, { address: process.env.ROUTER_2, pingCount: DEFAULT_PING_COUNT }],
-    // [CurlCommand, { address: 'https://www.google.com' }],
-    // [CurlCommand, { address: 'https://www.wp.pl' }],
-    // [CurlCommand, { address: 'https://www.wikipedia.org' }],
-    // [CurlCommand, { address: process.env.ROUTER_1 }],
-    // [CurlCommand, { address: process.env.ROUTER_2 }],
+    [PingCommand, { address: 'wp.pl', pingCount: DEFAULT_PING_COUNT }],
+    [PingCommand, { address: 'pl.wikipedia.org', pingCount: DEFAULT_PING_COUNT }],
+    [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT }],
+    [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT }],
+    [PingCommand, { address: process.env.ROUTER_2, pingCount: DEFAULT_PING_COUNT }],
+    [CurlCommand, { address: 'https://www.google.com' }],
+    [CurlCommand, { address: 'https://www.wp.pl' }],
+    [CurlCommand, { address: 'https://www.wikipedia.org' }],
+    [CurlCommand, { address: process.env.ROUTER_1 }],
+    [CurlCommand, { address: process.env.ROUTER_2 }],
 ]
 
 const measureDataUsed = async (influxAPI) => {
