@@ -35,6 +35,7 @@ export default class DataUsedCommand extends BaseCommand {
 
             super._execute(`/usr/sbin/ifconfig ${inetInterface}`, commandName, {
                 onSuccess: (stdout) => {
+                    metricName = 'dataUsed'
                     _.assign(metrics, this.parseOutput(stdout, options))
 
                     console.log(`Found ${commandName} metrics for interface ${inetInterface}`)
