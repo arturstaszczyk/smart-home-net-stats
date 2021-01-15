@@ -1,10 +1,10 @@
 import _ from 'lodash'
-import { exec } from 'child_process'
+import BaseCommand from './BaseCommand'
 
 const DEFAULT_PING_COUNT = 5
 const DEFAULT_PING_ADDRESS = 'google.com'
 
-export default class PingCommand {
+export default class PingCommand extends BaseCommand {
 
     parseOutput(stdout) {
 
@@ -38,45 +38,40 @@ export default class PingCommand {
     execute(options) {
         const address = options.address || DEFAULT_PING_ADDRESS
         const pingCount = options.pingCount || DEFAULT_PING_COUNT
+        const commandName = 'Ping'
 
-        console.log(`Pinging ${address}...`)
+        console.log(`Command ${commandName}: '${address}' ${pingCount} times`)
+
         return new Promise((resolve, reject) => {
 
             const tags = { address }
             const metrics = {}
             let metricName = null
 
-            const ls = exec(`ping -c ${pingCount} ${address}`, (error, stdout, stderr) => {
+            const command = `ping -c ${pingCount} ${address}`
 
-                if (!error) {
+            super._execute(command, commandName, {
+                onSuccess: (stdout) => {
                     metricName = 'ping'
                     _.assign(metrics, this.parseOutput(stdout))
 
-                    console.log(`--Found ping metrics for address ${address} and pingCount ${pingCount}`)
+                    console.log(`Found ping metrics for address ${address} and pingCount ${pingCount}`)
                     console.log(metrics)
-                } else {
+                },
+                onError: () => {
                     metricName = 'pingError'
+                    console.log(`ping error for address ${address} and pingCount ${pingCount}`)
+
                     _.assign(tags, { error:  'error' })
                     _.assign(metrics, { count: '1' })
-
-                    console.log(`--ping error for address ${address} and pingCount ${pingCount}`)
-                    console.log(error)
-                    console.log(stderr)
-                }
-            })
-
-            ls.on('close', (code, message) => {
-                const pingResults = { metricName, metrics, tags }
-
-                console.log(`--On subprocess close: Exit code: ${code}`)
-                console.log(message)
-                console.log('Ping command returing output:')
-                console.log(pingResults)
-
-                if (code) {
-                    reject(pingResults)
-                } else {
-                    resolve(pingResults)
+                },
+                onClose: (errorCode) => {
+                    const pingResults = { metricName, metrics, tags }
+                    if(errorCode) {
+                        reject(pingResults)
+                    } else { 
+                        resolve(pingResults)
+                    }
                 }
             })
         })
