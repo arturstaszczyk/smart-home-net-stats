@@ -1,25 +1,20 @@
-// def get_download_speed():
-
-//     try:
-
-//         download_response = subprocess.Popen('/home/pi/go/bin/fast-cli', 
-//                             shell=True, 
-//                             stdout=subprocess.PIPE).stdout.read().decode('utf-8')
-
-//         print(download_response)
-
-//         download_speed = re.findall('([0-9]+.[0-9]+\sMbps)', download_response, re.MULTILINE)
-//         download_speed = download_speed[-1][:5] # get last measurement, without ' Mbps' string
-//     except:
-//         download_speed = 0.0
-
-//     return float(download_speed)
-
+import _ from 'lodash'
 import BaseCommand from './BaseCommand'
 
 export default class SpeedTestCommand extends BaseCommand {
 
-    execute(options) {
+    parseOutput(stdout) {
+        const speedStats = {}
+        const download = stdout.match(/Download: ([0-9]+[.,]{1}[0-9]+)\s+/)
+        const upload = stdout.match(/Upload: ([0-9]+[.,]{1}[0-9]+)\s+/)
+
+        speedStats['download'] = download && download[1].replace(',', '.')
+        speedStats['upload'] = upload && upload[1].replace(',', '.')
+
+        return speedStats
+    }
+
+    execute() {
 
         const commandName = 'SPEED'
 
@@ -27,24 +22,28 @@ export default class SpeedTestCommand extends BaseCommand {
         return new Promise((resolve, reject) => {
 
             let metricName = ''
-            const metrics = []
-            const tags = []
+            const metrics = {}
+            const tags = {}
 
             super._execute('speedtest-cli --simple', commandName, {
                 onSuccess: (stdout) => {
-                    console.log(stdout)
+                    metricName = 'speedtest'
+                    _.assign(metrics, this.parseOutput(stdout))
+
+                    console.log(`Found ${commandName} metrics`)
+                    console.log(metrics)
                 },
                 onError: () => {
-
+                    metricName = 'speedtest-error'
+                    _.assign(tags, { error: 'error' })
+                    _.assign(metrics, { count: '1' })
                 },
                 onClose: (error) => {
-                    const pingResults = { metricName, metrics, tags }
-                    console.log(pingResults)
-
+                    const speedResults = { metricName, metrics, tags }
                     if (error) {
-                        reject(pingResults)
+                        reject(speedResults)
                     } else {
-                        resolve(pingResults)
+                        resolve(speedResults)
                     }
                 }
             })
