@@ -54,7 +54,6 @@ export default class PingCommand extends BaseCommand {
                 onSuccess: (stdout) => {
                     metricName = 'ping'
                     _.assign(metrics, this.parseOutput(stdout))
-                    _.assign(tags, address)
 
                     console.log(`Found ${commandName} metrics for address ${address} and pingCount ${pingCount}`)
                     console.log(metrics)
