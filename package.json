@@ -1,7 +1,8 @@
 {
   "scripts": {
     "start": "nodemon --exec babel-node ./index.js",
-    "standalone": "babel-node ./index.js"
+    "standalone-infrequent": "babel-node ./index.js infrequent",
+    "standalone-frequent": "babel-node ./index.js frequent"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",
