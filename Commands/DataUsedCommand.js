@@ -37,7 +37,7 @@ export default class DataUsedCommand extends BaseCommand {
                 onSuccess: (stdout) => {
                     _.assign(metrics, this.parseOutput(stdout, options))
 
-                    console.log(`--Found DataUsage metrics for interface ${inetInterface}`)
+                    console.log(`Found ${commandName} metrics for interface ${inetInterface}`)
                     console.log(metrics)
                 },
                 onError: () => {

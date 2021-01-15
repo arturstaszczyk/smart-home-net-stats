@@ -33,6 +33,7 @@ export default class CurlCommand extends BaseCommand {
                 onSuccess: (stdout) => {
                     metricName = 'curl'
                     _.assign(metrics, this.parseOutput(stdout))
+                    _.assign(tags, address)
 
                     console.log(`Found ${commandName} metrics for address ${address}`)
                     console.log(metrics)
