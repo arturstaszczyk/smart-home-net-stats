@@ -38,7 +38,7 @@ export default class PingCommand extends BaseCommand {
     execute(options) {
         const address = options.address || DEFAULT_PING_ADDRESS
         const pingCount = options.pingCount || DEFAULT_PING_COUNT
-        const commandName = 'Ping'
+        const commandName = 'PING'
 
         console.log(`Command ${commandName}: '${address}' ${pingCount} times`)
 
@@ -55,12 +55,12 @@ export default class PingCommand extends BaseCommand {
                     metricName = 'ping'
                     _.assign(metrics, this.parseOutput(stdout))
 
-                    console.log(`Found ping metrics for address ${address} and pingCount ${pingCount}`)
+                    console.log(`Found ${commandName} metrics for address ${address} and pingCount ${pingCount}`)
                     console.log(metrics)
                 },
                 onError: () => {
                     metricName = 'pingError'
-                    console.log(`ping error for address ${address} and pingCount ${pingCount}`)
+                    console.log(`${commandName} error for address ${address} and pingCount ${pingCount}`)
 
                     _.assign(tags, { error:  'error' })
                     _.assign(metrics, { count: '1' })
