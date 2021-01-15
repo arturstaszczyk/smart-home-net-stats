@@ -2,7 +2,7 @@ require('dotenv').config()
 
 import PingCommand from './Commands/PingCommand'
 import CurlCommand from './Commands/CurlCommand'
-import command from './Commands/command'
+import { command } from './Commands/BaseCommand'
 import InfluxWriter from './Influx/influxWriter'
 import _ from 'lodash'
 import DataUsedCommand from './Commands/DataUsedCommand'
