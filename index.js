@@ -19,6 +19,7 @@ const frequentCommands = [
     [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT }],
     [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT }],
     [PingCommand, { address: process.env.ROUTER_2, pingCount: DEFAULT_PING_COUNT }],
+    [PingCommand, { address: '8.8.8.8', pingCount: DEFAULT_PING_COUNT }],
     [CurlCommand, { address: 'https://www.google.com' }],
     [CurlCommand, { address: 'https://www.wp.pl' }],
     [CurlCommand, { address: 'https://www.wikipedia.org' }],
