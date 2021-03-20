@@ -1,0 +1,9 @@
+FROM ubuntu
+RUN apt update -y && apt upgrade -y
+RUN apt install -y wget gnupg
+RUN wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
+RUN echo "deb https://packages.grafana.com/oss/deb stable main" | tee -a /etc/apt/sources.list.d/grafana.list
+RUN apt update
+RUN apt-get -y install grafana
+
+ENTRYPOINT ["grafana"]

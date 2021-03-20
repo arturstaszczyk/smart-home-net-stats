@@ -18,13 +18,11 @@ const frequentCommands = [
     [PingCommand, { address: 'pl.wikipedia.org', pingCount: DEFAULT_PING_COUNT }],
     [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT }],
     [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT }],
-    [PingCommand, { address: process.env.ROUTER_2, pingCount: DEFAULT_PING_COUNT }],
     [PingCommand, { address: '8.8.8.8', pingCount: DEFAULT_PING_COUNT }],
     [CurlCommand, { address: 'https://www.google.com' }],
     [CurlCommand, { address: 'https://www.wp.pl' }],
     [CurlCommand, { address: 'https://www.wikipedia.org' }],
     [CurlCommand, { address: process.env.ROUTER_1 }],
-    [CurlCommand, { address: process.env.ROUTER_2 }],
 ]
 
 const infrequentCommands = [
