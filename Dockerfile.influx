@@ -8,4 +8,8 @@ RUN apt install -y influxdb
 
 # ADD ./entrypoint.sh /tmp/entrypoint.sh
 # RUN /bin/sh /tmp/entrypoint.sh
-ENTRYPOINT ["influxd"]
+WORKDIR /var/influx
+COPY ./ /var/influx
+RUN ls /var/influx && cat /var/influx/influx-config-override.config
+
+ENTRYPOINT ["influxd", "-config", "/var/influx/influx-config-override.config"]
