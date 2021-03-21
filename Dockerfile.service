@@ -30,5 +30,5 @@ WORKDIR /var/smart-home
 COPY ./ /var/smart-home
 
 # install node and npm
-RUN ./setup-node.sh
-ENTRYPOINT [ "./run-node.sh" ]
+RUN ./tools/setup-node.sh
+ENTRYPOINT [ "./tools/run-node.sh" ]

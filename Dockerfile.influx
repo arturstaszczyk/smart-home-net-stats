@@ -6,10 +6,10 @@ RUN echo "deb https://repos.influxdata.com/ubuntu focal stable" | tee /etc/apt/s
 RUN apt update
 RUN apt install -y influxdb
 
-# ADD ./entrypoint.sh /tmp/entrypoint.sh
-# RUN /bin/sh /tmp/entrypoint.sh
-WORKDIR /var/influx
-COPY ./ /var/influx
-RUN ls /var/influx && cat /var/influx/influx-config-override.config
+ENV INFLUX_DIR /var/influx
 
-ENTRYPOINT ["influxd", "-config", "/var/influx/influx-config-override.config"]
+WORKDIR $INFLUX_DIR
+COPY ./ $INFLUX_DIR
+RUN ls $INFLUX_DIR/tools && cat $INFLUX_DIR/tools/influx-config-override.config
+
+ENTRYPOINT ["influxd", "-config", "/var/influx/tools/influx-config-override.config"]
