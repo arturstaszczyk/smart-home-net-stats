@@ -1,7 +1,8 @@
 #!/bin/bash
 
+cd /var/smart-home
 pwd
-source $NVM_DIR/nvm.sh
+source /usr/local/nvm/nvm.sh
 nvm use
 
 node --version

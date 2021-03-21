@@ -28,8 +28,28 @@ RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | 
 
 WORKDIR /var/smart-home
 COPY ./ /var/smart-home
+RUN printenv > env.docker.sh
+RUN cat env.docker.sh
+
+# Add crontab file in the cron directory
+COPY tools/cron-job-smart-home /etc/cron.d
+RUN ls /etc/cron.d
+
+# Give execution rights on the cron job
+RUN chmod 0644 /etc/cron.d/cron-job-smart-home
+
+#Install Cron
+RUN apt-get update
+RUN apt-get -y install cron
+
+# Apply cron job 
+RUN crontab /etc/cron.d/cron-job-smart-home
 
 # install node and npm
 RUN ./tools/container/install-node.sh
-CMD ["frequent"]
-ENTRYPOINT [ "./tools/container/run-script.sh"]
+
+# Run the command on container startup
+CMD printenv > .env && touch /var/log/cron.log && echo "" > /var/log/cron.log && cron && tail -f /var/log/cron.log
+
+# CMD ["frequent"]
+# ENTRYPOINT [ "./tools/container/run-script.sh"]
