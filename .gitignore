@@ -3,3 +3,4 @@ node_modules
 cron.log
 *.log
 run.sh
+env.docker
