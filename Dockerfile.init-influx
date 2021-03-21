@@ -7,7 +7,8 @@ RUN echo "deb https://repos.influxdata.com/ubuntu focal stable" | tee /etc/apt/s
 RUN apt update
 RUN apt install -y influxdb
 
-WORKDIR /var/influx-init
-COPY ./ /var/influx-init
+ENV WORK_DIR /var/influx-init
+WORKDIR $WORK_DIR
+ADD ./tools/container/initializeDB.sh $WORK_DIR
 
-ENTRYPOINT [ "tools/initializeDB.sh" ]
+ENTRYPOINT [ "./initializeDB.sh" ]

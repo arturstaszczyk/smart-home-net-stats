@@ -7,4 +7,4 @@ nvm use
 node --version
 
 yarn 
-yarn standalone-frequent
+yarn standalone-$1

@@ -9,7 +9,7 @@ RUN apt install -y influxdb
 ENV INFLUX_DIR /var/influx
 
 WORKDIR $INFLUX_DIR
-COPY ./ $INFLUX_DIR
-RUN ls $INFLUX_DIR/tools && cat $INFLUX_DIR/tools/influx-config-override.config
+ADD ./tools/influx-config-override.config $INFLUX_DIR
+RUN ls $INFLUX_DIR && cat $INFLUX_DIR/influx-config-override.config
 
-ENTRYPOINT ["influxd", "-config", "/var/influx/tools/influx-config-override.config"]
+ENTRYPOINT ["influxd", "-config", "/var/influx/influx-config-override.config"]
