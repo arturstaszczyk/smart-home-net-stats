@@ -4,3 +4,4 @@ cron.log
 *.log
 run.sh
 env.docker
+data/
