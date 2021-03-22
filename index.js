@@ -14,19 +14,19 @@ import InfluxWriter from './Influx/influxWriter'
 const DEFAULT_PING_COUNT = 6
 
 const frequentCommands = [
-    [PingCommand, { address: 'wp.pl', pingCount: DEFAULT_PING_COUNT }],
-    [PingCommand, { address: 'pl.wikipedia.org', pingCount: DEFAULT_PING_COUNT }],
-    [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT }],
-    [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT }],
-    [PingCommand, { address: '8.8.8.8', pingCount: DEFAULT_PING_COUNT }],
-    [CurlCommand, { address: 'https://www.google.com' }],
-    [CurlCommand, { address: 'https://www.wp.pl' }],
-    [CurlCommand, { address: 'https://www.wikipedia.org' }],
-    [CurlCommand, { address: process.env.ROUTER_1 }],
+    [PingCommand, { address: 'wp.pl', pingCount: DEFAULT_PING_COUNT, computerTag:process.env.COMPUTER_NAME }],
+    [PingCommand, { address: 'pl.wikipedia.org', pingCount: DEFAULT_PING_COUNT, computerTag:process.env.COMPUTER_NAME }],
+    [PingCommand, { address: 'google.com', pingCount: DEFAULT_PING_COUNT, computerTag:process.env.COMPUTER_NAME }],
+    [PingCommand, { address: process.env.ROUTER_1, pingCount: DEFAULT_PING_COUNT, computerTag:process.env.COMPUTER_NAME }],
+    [PingCommand, { address: '8.8.8.8', pingCount: DEFAULT_PING_COUNT, computerTag:process.env.COMPUTER_NAME }],
+    [CurlCommand, { address: 'https://www.google.com', computerTag:process.env.COMPUTER_NAME }],
+    [CurlCommand, { address: 'https://www.wp.pl', computerTag:process.env.COMPUTER_NAME }],
+    [CurlCommand, { address: 'https://www.wikipedia.org', computerTag:process.env.COMPUTER_NAME }],
+    [CurlCommand, { address: process.env.ROUTER_1, computerTag:process.env.COMPUTER_NAME }],
 ]
 
 const infrequentCommands = [
-    [SpeedTestCommand],
+ //   [SpeedTestCommand],
 ]
 
 const measureDataUsed = async (influxAPI) => {
@@ -62,7 +62,7 @@ const runCommands = async (commands) => {
         }
     }
 
-    outputs.push(await measureDataUsed(influxWriter))
+    //outputs.push(await measureDataUsed(influxWriter))
 
     console.log('--ALL COMMANDS EXECUTED')
 

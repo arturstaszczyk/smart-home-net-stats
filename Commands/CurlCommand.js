@@ -20,12 +20,13 @@ export default class CurlCommand extends BaseCommand {
     execute(options) {
 
         const address = options.address || DEFAULT_CURL_ADDRESS
+        const computerTag = options.computerTag || 'UNKNOWN'
         const commandName = 'CURL'
         console.log(`Command ${commandName}: '${address}'`)
 
         return new Promise((resolve, reject) => {
 
-            const tags = { address }
+            const tags = { address, computerTag }
             const metrics = {}
             let metricName = ''
 

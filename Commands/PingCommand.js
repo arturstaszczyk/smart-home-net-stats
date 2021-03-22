@@ -38,13 +38,14 @@ export default class PingCommand extends BaseCommand {
     execute(options) {
         const address = options.address || DEFAULT_PING_ADDRESS
         const pingCount = options.pingCount || DEFAULT_PING_COUNT
+        const computerTag = options.computerTag || 'UNKNOWN'
         const commandName = 'PING'
 
         console.log(`Command ${commandName}: '${address}' ${pingCount} times`)
 
         return new Promise((resolve, reject) => {
 
-            const tags = { address }
+            const tags = { address, computerTag }
             const metrics = {}
             let metricName = null
 
