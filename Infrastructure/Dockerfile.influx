@@ -1,14 +1,16 @@
 FROM ubuntu
 RUN apt update -y && apt upgrade -y
 RUN apt install -y wget gnupg
-RUN apt install -y iputils-ping
 RUN wget -qO- https://repos.influxdata.com/influxdb.key | apt-key add -
 RUN echo "deb https://repos.influxdata.com/ubuntu focal stable" | tee /etc/apt/sources.list.d/influxdb.list
 RUN apt update
+
 RUN apt install -y influxdb
 
-ENV WORK_DIR /var/influx-init
-WORKDIR $WORK_DIR
-ADD ./tools/container/initializeDB.sh $WORK_DIR
+ENV INFLUX_DIR /var/influx
 
-ENTRYPOINT [ "./initializeDB.sh" ]
+WORKDIR $INFLUX_DIR
+ADD ./containerScripts/influx-config-override.config $INFLUX_DIR
+RUN ls $INFLUX_DIR && cat $INFLUX_DIR/influx-config-override.config
+
+ENTRYPOINT ["influxd", "-config", "/var/influx/influx-config-override.config"]
