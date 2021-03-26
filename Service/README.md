@@ -1,0 +1,3 @@
+env file
+bild 
+run

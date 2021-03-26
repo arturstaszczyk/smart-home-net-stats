@@ -7,5 +7,6 @@ nvm use
 
 node --version
 
-yarn 
+npm install --global yarn
+yarn install
 yarn standalone-$1
