@@ -2,31 +2,21 @@ FROM ubuntu
 # replace shell with bash so we can source files
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
-# update the repository sources list
-# and install dependencies
 RUN apt-get update
-RUN apt-get install -y wget gnupg
+RUN apt-get --no-install-recommends install -y --fix-missing wget gnupg 
 RUN apt-get install -y iputils-ping
-# RUN apt-get install -y curl
-# RUN apt-get install -y ca-certificates
+RUN apt-get install -y curl
+RUN apt-get install -y ca-certificates
 RUN apt-get install -y libatomic1
 RUN apt-get -y autoclean
 
-# RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-# RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-# RUN apt-get update \
-#     && apt-get install -y --no-install-recommends yarn 
-
-# nvm environment variables
-ENV NVM_DIR /usr/local/nvm
-
-# install nvm
-# https://github.com/creationix/nvm#install-script
-RUN mkdir $NVM_DIR
-RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash 
-
 WORKDIR /var/smart-home
 COPY ./ /var/smart-home
+
+ENV NVM_DIR /usr/local/nvm
+RUN mkdir $NVM_DIR
+RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
+
 RUN printenv > env.docker.sh
 RUN cat env.docker.sh
 
