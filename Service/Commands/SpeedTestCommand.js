@@ -17,13 +17,14 @@ export default class SpeedTestCommand extends BaseCommand {
     execute() {
 
         const commandName = 'SPEED'
+        const computerTag = options.computerTag || 'UNKNOWN'
 
         console.log(`Starting ${commandName} command`)
         return new Promise((resolve, reject) => {
 
             let metricName = ''
             const metrics = {}
-            const tags = {}
+            const tags = { computerTag }
 
             super._execute('speedtest-cli --simple', commandName, {
                 onSuccess: (stdout) => {
