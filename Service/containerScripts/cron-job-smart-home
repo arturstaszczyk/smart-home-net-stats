@@ -1,3 +1,5 @@
 * * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh frequent >> /var/log/cron.log 2>&1
+0 * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh infrequent >> /var/log/cron.log 2>&1
+
 0 0 * * 0 cp /var/cron/log /var/cron/log.bak && echo "" > /var/log/cron.log # rotate logs once a week
 # Don't remove the empty line at the end of this file. It is required to run the cron job1

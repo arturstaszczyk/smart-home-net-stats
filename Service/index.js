@@ -26,7 +26,7 @@ const frequentCommands = [
 ]
 
 const infrequentCommands = [
- //   [SpeedTestCommand],
+    [SpeedTestCommand],
 ]
 
 const measureDataUsed = async (influxAPI) => {

@@ -46,6 +46,8 @@ export default class SpeedTestCommand extends BaseCommand {
                         resolve(speedResults)
                     }
                 }
+            }, {
+                timeout: 100000
             })
         })
     }

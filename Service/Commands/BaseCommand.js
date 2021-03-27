@@ -14,11 +14,11 @@ export default class BaseCommand {
 
     }
 
-    _execute(command, commandName, callbacks) {
+    _execute(command, commandName, callbacks, params) {
 
         const { onSuccess, onError, onClose } = callbacks
 
-        const ls = exec(command, (error, stdout, stderr) => {
+        const ls = exec(command, {...params}, (error, stdout, stderr) => {
 
             if (!error) {
                 console.log(`Command ${commandName} successful`)

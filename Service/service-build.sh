@@ -1,1 +1,1 @@
-docker build --tag smart-home-service --file Dockerfile.service .
+docker build --no-cache --tag smart-home-service --file Dockerfile.service .
