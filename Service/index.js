@@ -26,7 +26,7 @@ const frequentCommands = [
 ]
 
 const infrequentCommands = [
-    [SpeedTestCommand],
+    [SpeedTestCommand, { computerTag:process.env.COMPUTER_NAME }],
 ]
 
 const measureDataUsed = async (influxAPI) => {
@@ -58,6 +58,7 @@ const runCommands = async (commands) => {
         try {
             outputs.push(await command(...commandDef))
         } catch (errorMetrics) {
+            console.log(errorMetrics)
             outputs.push(errorMetrics)
         }
     }

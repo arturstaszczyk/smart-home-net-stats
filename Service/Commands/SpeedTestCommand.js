@@ -14,12 +14,12 @@ export default class SpeedTestCommand extends BaseCommand {
         return speedStats
     }
 
-    execute() {
-
+    execute(options) {
+        console.log('SpeedTestCommand.execute')
         const commandName = 'SPEED'
         const computerTag = options.computerTag || 'UNKNOWN'
 
-        console.log(`Starting ${commandName} command`)
+        console.log(`Starting ${commandName} command on ${computerTag}`)
         return new Promise((resolve, reject) => {
 
             let metricName = ''
