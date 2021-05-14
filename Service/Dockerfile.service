@@ -1,6 +1,6 @@
 FROM ubuntu
 # replace shell with bash so we can source files
-RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+SHELL ["/bin/bash", "--login", "-c"] 
 
 RUN apt-get update
 RUN apt-get --no-install-recommends install -y --fix-missing wget gnupg 
@@ -16,9 +16,22 @@ RUN pip install speedtest-cli
 WORKDIR /var/smart-home
 COPY ./ /var/smart-home
 
+
 ENV NVM_DIR /usr/local/nvm
+ENV NODE_VERSION 14.15.3
 RUN mkdir $NVM_DIR
+
 RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
+RUN source $NVM_DIR/nvm.sh \
+    && nvm install $NODE_VERSION \
+    && nvm alias default $NODE_VERSION \
+    && nvm use default
+
+ENV NODE_PATH $NVM_DIR/v$NODE_VERSION/lib/node_modules
+ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
+RUN node --version
+RUN npm install --global yarn && yarn install
 
 RUN printenv > env.docker.sh
 RUN cat env.docker.sh
@@ -37,11 +50,5 @@ RUN apt-get -y install cron
 # Apply cron job 
 RUN crontab /etc/cron.d/cron-job-smart-home
 
-# install node and npm
-RUN ./containerScripts/install-node.sh
-
 # Run the command on container startup
 CMD printenv > .env && touch /var/log/cron.log && echo "" > /var/log/cron.log && cron && tail -f /var/log/cron.log
-
-# CMD ["frequent"]
-# ENTRYPOINT [ "./tools/container/run-script.sh"]
