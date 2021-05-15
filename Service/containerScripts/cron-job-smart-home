@@ -1,5 +1,5 @@
 * * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh frequent >> /var/log/cron.log 2>&1
-0 * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh infrequent >> /var/log/cron2.log 2>&1
+7 * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh infrequent >> /var/log/cron2.log 2>&1
 
 0 0 * * 0 cp /var/log/cron.log /var/log/cron.log.bak && echo "" > /var/log/cron.log # rotate logs once a week
 0 0 * * 0 cp /var/log/cron2.log /var/cron/log2.bak && echo "" > /var/log/cron2.log # rotate logs once a week
