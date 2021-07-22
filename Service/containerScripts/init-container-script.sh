@@ -5,7 +5,8 @@ cat env.docker.sh
 
 # Add crontab file in the cron directory
 
-echo $SPEED_TEST_MINUTE" * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh infrequent\n >> /var/log/cron2.log 2>&1\n" >> /var/smart-home/containerScripts/cron-job-smart-home
+echo $SPEED_TEST_MINUTE" * * * * . /var/smart-home/env.docker.sh; /var/smart-home/containerScripts/run-script.sh infrequent >> /var/log/cron2.log 2>&1" >> /var/smart-home/containerScripts/cron-job-smart-home
+echo "" >> /var/smart-home/containerScripts/cron-job-smart-home
 cp ./containerScripts/cron-job-smart-home /etc/cron.d
 
 cat /etc/cron.d/cron-job-smart-home
@@ -23,3 +24,4 @@ touch /var/log/cron.log
 echo "" > /var/log/cron.log 
 cron
 tail -f /var/log/cron.log
+ 
