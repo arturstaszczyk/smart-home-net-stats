@@ -15,3 +15,12 @@ Will build docker images
 
 `./infrastructure-run.sh` 
 Will run docker images, initialize DB and hook them up into one network
+
+## docker hub
+
+I am using single docker repo, because it's free. I am uploading images as the same service with different tags
+
+`docker tag smart-home-init-influx:latest <docker_id>/smart-home:init_influx`
+`docker push <docker_id>/smart-home:init_influx`
+
+Need to to reverse after pulling
