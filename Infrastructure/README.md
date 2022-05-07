@@ -21,6 +21,11 @@ Will run docker images, initialize DB and hook them up into one network
 I am using single docker repo, because it's free. I am uploading images as the same service with different tags
 
 `docker tag smart-home-init-influx:latest <docker_id>/smart-home:init_influx`
+and
+`docker tag smart-home-influx:latest stasiu86/smart-home:influx`
+then
 `docker push <docker_id>/smart-home:init_influx`
+and
+`docker push <docker_id>/smart-home:influx`
 
 Need to to reverse after pulling
