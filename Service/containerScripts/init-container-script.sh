@@ -24,7 +24,7 @@ chmod 0644 /etc/cron.d/cron-job-smart-home
 crontab /etc/cron.d/cron-job-smart-home
 
 
-printenv > .env s
+printenv > .env
 touch /var/log/cron.log 
 echo "" > /var/log/cron.log 
 cron
