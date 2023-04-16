@@ -1,2 +1,4 @@
 node_modules/
 env.docker
+service-push*
+service-pull*
