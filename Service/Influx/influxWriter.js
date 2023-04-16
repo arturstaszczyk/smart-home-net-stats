@@ -14,6 +14,8 @@ export default class InfluxWriter {
         this.influxDB = new InfluxDB(clientOptions)
         this.writeAPI = this.influxDB.getWriteApi('', bucket)
         this.queryAPI = this.influxDB.getQueryApi('')
+
+        console.log(`Creating Influx Writer for address ${process.env.INFLUX_HOST} and port ${process.env.INFLUX_PORT}`)
     }
 
     storeMetrics(metric, tags, floadFields) {
