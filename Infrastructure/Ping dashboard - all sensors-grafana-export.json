@@ -3,25 +3,37 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 1,
-  "iteration": 1621141440375,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -30,11 +42,23 @@
       },
       "id": 33,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Row title",
       "type": "row"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -79,21 +103,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
                 "15m"
               ],
               "type": "time"
-            },
-            {
-              "params": [
-                "computerTag"
-              ],
-              "type": "tag"
             },
             {
               "params": [
@@ -134,7 +156,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -179,21 +204,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
                 "15m"
               ],
               "type": "time"
-            },
-            {
-              "params": [
-                "computerTag"
-              ],
-              "type": "tag"
             },
             {
               "params": [
@@ -234,7 +257,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -277,10 +303,14 @@
         "showThresholdMarkers": false,
         "text": {}
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
           "alias": "Download",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -318,6 +348,10 @@
         },
         {
           "alias": "Upload",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -359,7 +393,10 @@
       "type": "gauge"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -404,9 +441,13 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -453,7 +494,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -484,6 +528,7 @@
       },
       "id": 27,
       "options": {
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -495,9 +540,13 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -544,7 +593,10 @@
       "type": "gauge"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -587,10 +639,14 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "targets": [
         {
           "alias": "",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -641,10 +697,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
       },
       "fill": 1,
       "fillGradient": 5,
@@ -672,7 +727,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -683,6 +738,10 @@
       "targets": [
         {
           "alias": "",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -734,9 +793,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "PING times",
       "tooltip": {
         "shared": true,
@@ -746,9 +803,7 @@
       "transformations": [],
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -756,7 +811,6 @@
         {
           "$$hashKey": "object:87",
           "format": "short",
-          "label": null,
           "logBase": 1,
           "max": "500",
           "min": "0",
@@ -765,16 +819,12 @@
         {
           "$$hashKey": "object:88",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -782,10 +832,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
       },
       "fill": 1,
       "fillGradient": 4,
@@ -813,7 +862,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -827,6 +876,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -876,9 +929,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "curl lookup",
       "tooltip": {
         "shared": true,
@@ -887,9 +938,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -897,7 +946,6 @@
         {
           "$$hashKey": "object:87",
           "format": "short",
-          "label": null,
           "logBase": 1,
           "max": "1",
           "min": "0",
@@ -906,16 +954,12 @@
         {
           "$$hashKey": "object:88",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -923,10 +967,8 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "SmartHome",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "SmartHome"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -954,7 +996,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -965,6 +1007,9 @@
       "targets": [
         {
           "alias": "",
+          "datasource": {
+            "uid": "SmartHome"
+          },
           "groupBy": [
             {
               "params": [
@@ -1014,9 +1059,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "% packet loss",
       "tooltip": {
         "shared": true,
@@ -1025,33 +1068,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1059,10 +1093,8 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "SmartHome",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "SmartHome"
       },
       "fill": 1,
       "fillGradient": 4,
@@ -1090,7 +1122,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1100,6 +1132,9 @@
       "steppedLine": true,
       "targets": [
         {
+          "datasource": {
+            "uid": "SmartHome"
+          },
           "groupBy": [
             {
               "params": [
@@ -1149,9 +1184,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "curl total",
       "tooltip": {
         "shared": true,
@@ -1160,9 +1193,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1170,7 +1201,6 @@
         {
           "$$hashKey": "object:153",
           "format": "short",
-          "label": null,
           "logBase": 1,
           "max": "4",
           "min": "0",
@@ -1179,16 +1209,12 @@
         {
           "$$hashKey": "object:154",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1196,10 +1222,8 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "SmartHome",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "SmartHome"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1227,7 +1251,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1237,6 +1261,9 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "uid": "SmartHome"
+          },
           "groupBy": [
             {
               "params": [
@@ -1280,9 +1307,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Ping Error Count",
       "tooltip": {
         "shared": true,
@@ -1291,33 +1316,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1325,10 +1341,8 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "SmartHome",
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "uid": "SmartHome"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1356,7 +1370,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1366,6 +1380,9 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "uid": "SmartHome"
+          },
           "groupBy": [
             {
               "params": [
@@ -1409,9 +1426,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "curl Error Count",
       "tooltip": {
         "shared": true,
@@ -1420,33 +1435,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1454,10 +1460,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1485,7 +1490,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1495,6 +1500,10 @@
       "steppedLine": false,
       "targets": [
         {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -1532,9 +1541,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "SpeedTest error count",
       "tooltip": {
         "shared": true,
@@ -1543,33 +1550,24 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
@@ -1577,10 +1575,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
+      "datasource": {
+        "type": "influxdb",
+        "uid": "Gv-wFIiRz"
       },
       "fill": 1,
       "fillGradient": 3,
@@ -1608,7 +1605,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.1",
+      "pluginVersion": "9.4.7",
       "pointradius": 5,
       "points": true,
       "renderer": "flot",
@@ -1619,6 +1616,10 @@
       "targets": [
         {
           "alias": "Download",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -1662,6 +1663,10 @@
         },
         {
           "alias": "Upload",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "Gv-wFIiRz"
+          },
           "groupBy": [
             {
               "params": [
@@ -1706,9 +1711,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Download/upload (mean)",
       "tooltip": {
         "shared": true,
@@ -1717,9 +1720,7 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
@@ -1727,7 +1728,6 @@
         {
           "$$hashKey": "object:98",
           "format": "short",
-          "label": null,
           "logBase": 1,
           "max": "60",
           "min": "0",
@@ -1736,37 +1736,30 @@
         {
           "$$hashKey": "object:99",
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 27,
+  "revision": 1,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
-        "allValue": null,
         "current": {
           "selected": true,
           "text": "All",
           "value": "$__all"
         },
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "SensorID",
         "options": [
@@ -1784,9 +1777,14 @@
             "selected": false,
             "text": "pi4",
             "value": "pi4"
+          },
+          {
+            "selected": false,
+            "text": "pi5",
+            "value": "pi5"
           }
         ],
-        "query": "pi3,pi4",
+        "query": "pi3,pi4,pi5",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
@@ -1801,5 +1799,6 @@
   "timezone": "",
   "title": "Ping dashboard - all sensors",
   "uid": "1ojbtE-Mz",
-  "version": 35
+  "version": 3,
+  "weekStart": ""
 }
