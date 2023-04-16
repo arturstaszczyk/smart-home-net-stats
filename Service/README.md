@@ -30,4 +30,7 @@ Set variables defined in template (In the .env file there are variables required
 
 ## Troubleshooting
 Operation not permitted (cron)
-https://stackoverflow.com/questions/65717411/operation-not-permitted-during-docker-build
+-> https://stackoverflow.com/questions/65717411/operation-not-permitted-during-docker-build
+
+Very slow PING execution
+-> Set the static DNS server (e.g. pointing to your router) https://pimylifeup.com/raspberry-pi-dns-settings/
