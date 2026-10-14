@@ -19,7 +19,7 @@ WORKDIR /var/smart-home
 COPY ./ /var/smart-home
 
 ENV NVM_DIR /usr/local/nvm
-ENV NODE_VERSION 14.15.3
+ENV NODE_VERSION 20.18.1
 RUN mkdir $NVM_DIR
 
 RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash

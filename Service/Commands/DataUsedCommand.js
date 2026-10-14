@@ -1,6 +1,5 @@
 import _ from 'lodash'
-import { exec } from 'child_process'
-import BaseCommand from './BaseCommand'
+import BaseCommand from './BaseCommand.js'
 
 const DEFAULT_INTERFACE = 'wlan0'
 

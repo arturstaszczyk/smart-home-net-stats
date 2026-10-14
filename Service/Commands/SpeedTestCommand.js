@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import BaseCommand from './BaseCommand'
+import BaseCommand from './BaseCommand.js'
 
 export default class SpeedTestCommand extends BaseCommand {
 

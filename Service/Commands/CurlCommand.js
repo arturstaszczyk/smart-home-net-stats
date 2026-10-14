@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import BaseCommand from './BaseCommand'
+import BaseCommand from './BaseCommand.js'
 
 const DEFAULT_CURL_ADDRESS = 'google.com'
 
@@ -8,8 +8,8 @@ export default class CurlCommand extends BaseCommand {
     parseOutput(stdout) {
 
         const curlStats = {}
-        const namelookup = stdout.match(/time_namelookup:\s+([0-9]+[\.,][0-9]+)/)
-        const total = stdout.match(/time_total:\s+([0-9]+[\.,][0-9]+)/)
+        const namelookup = stdout.match(/time_namelookup:\s+([0-9]+[.,][0-9]+)/)
+        const total = stdout.match(/time_total:\s+([0-9]+[.,][0-9]+)/)
 
         curlStats['namelookup'] = namelookup && namelookup[1].replace(',', '.')
         curlStats['total'] = total && total[1].replace(',', '.')

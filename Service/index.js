@@ -1,15 +1,13 @@
-require('dotenv').config()
+import 'dotenv/config'
 import _ from 'lodash'
 
-import { ArgumentParser } from 'argparse'
+import { command } from './Commands/BaseCommand.js'
+import PingCommand from './Commands/PingCommand.js'
+import CurlCommand from './Commands/CurlCommand.js'
+import DataUsedCommand from './Commands/DataUsedCommand.js'
+import SpeedTestCommand from './Commands/SpeedTestCommand.js'
 
-import { command } from './Commands/BaseCommand'
-import PingCommand from './Commands/PingCommand'
-import CurlCommand from './Commands/CurlCommand'
-import DataUsedCommand from './Commands/DataUsedCommand'
-import SpeedTestCommand from './Commands/SpeedTestCommand'
-
-import InfluxWriter from './Influx/influxWriter'
+import InfluxWriter from './Influx/influxWriter.js'
 
 const DEFAULT_PING_COUNT = 6
 
@@ -29,6 +27,8 @@ const infrequentCommands = [
     [SpeedTestCommand, { computerTag:process.env.COMPUTER_NAME }],
 ]
 
+// Disabled until Phase 3 makes DataUsedCommand safe; see the commented call in runCommands
+// eslint-disable-next-line no-unused-vars
 const measureDataUsed = async (influxAPI) => {
     const oldDownloadBytesArray = await influxAPI.getMetrics('dataUsed', 'downloadBytes', '15m')
     const oldUploadBytesArray = await influxAPI.getMetrics('dataUsed', 'uploadBytes', '15m')
