@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Ookla speed test 🔀 implemented, not yet tested end to end (`ookla-speedtest`, uncommitted) · Phase 2 🔀 mostly done (`ookla-speedtest`, uncommitted) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -141,15 +141,17 @@ Done 2026-10-14 at the user's request, committed as `1900b40` on `dashboard-v2`.
 - ⏳ **Not verified:** the light theme (only dark was screenshotted). By design, outages shorter than one grid cell (5 minutes at 24 h) appear only under *Failures over time*.
 - ⏳ **To take effect on a Pi:** rebuild and restart its service (`docker compose up -d --build` in `Service/`). Until then, *Where page-load time goes* and *Speed test ping* stay empty for that node.
 
-## Ookla speed test 🔀 (not in the original plan)
+## Ookla speed test ✅ (not in the original plan)
 
-Started 2026-10-14 at the user's request on branch `ookla-speedtest`; uncommitted. Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
+Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtest`. Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
 
 - ✅ `Service/Dockerfile.service`: Debian `speedtest-cli` (and the Python it pulled in) removed; Ookla CLI 1.2.0 downloaded per architecture (amd64, arm64, armhf) and verified against a pinned SHA-256.
 - ✅ `SpeedTestCommand`: runs `speedtest --accept-license --accept-gdpr --format=json --progress=no` (plus `--server-id` when `SPEED_TEST_SERVER_ID` is set; only digits are passed to the shell). Parses JSON; `download`/`upload` converted from bytes/s to Mbit/s and `ping` kept, so both dashboards work unchanged. New fields: `jitter`, `packetLoss`, `downloadLatency`, `uploadLatency` (loaded latency), `serverId`. Missing values are omitted instead of written as `null`; non-JSON output logs and writes no fields.
 - ✅ Schedule unchanged: one test per Pi per hour at its own `SPEED_TEST_MINUTE`; the template and README now say to spread them evenly (3 Pis: 0, 20, 40). New optional `SPEED_TEST_SERVER_ID`.
 - ✅ Verified: lint; parser against a real Ookla JSON result, a result without `packetLoss`, and non-JSON output; the command builder with and without a server ID, and with a non-numeric one.
-- ⏳ **Not verified (user is testing end to end):** the Docker build (download + checksum check), the binary running inside the container, a real cron-driven run writing to InfluxDB, armhf/arm64 builds.
+- ✅ **Verified end to end by the user** on the amd64 dev machine: the image built (download and checksum check), the container runs Ookla 1.2.0 from `/usr/local/bin/speedtest`, and real runs wrote all eight fields (`download`, `upload`, `ping`, `jitter`, `packetLoss`, `downloadLatency`, `uploadLatency`, `serverId`) to InfluxDB with no `speedtest-error`.
+- ⏳ **Not verified:** the arm64 and armhf builds on the Pis, and the hourly cron run (the verified runs were manual).
+- ⚠️ **Finding:** the first two real Ookla runs auto-selected server 1958 and measured only 248 and 332 Mbit/s down (upload ~101), where a run earlier the same evening against server 38577 (AWIST, Kraków) measured 883. Unpinned results vary with the server Ookla picks, so the dashboard would flag them as far below plan. Recommendation: set `SPEED_TEST_SERVER_ID` to a server that reaches ~900 (e.g. 38577) on every Pi and compare a few runs. Not yet decided by the user.
 - ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
 
 ## Bugs found during testing
