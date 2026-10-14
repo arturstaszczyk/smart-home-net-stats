@@ -1,0 +1,8 @@
+    time_namelookup:  0.000142
+       time_connect:  0.001336
+    time_appconnect:  0.000000
+   time_pretransfer:  0.001458
+      time_redirect:  0.000000
+ time_starttransfer:  0.010785
+                    ----------
+         time_total:  0.011012

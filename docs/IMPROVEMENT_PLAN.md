@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (uncommitted) · Phases 2–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Ookla speed test 🔀 implemented, not yet tested end to end (`ookla-speedtest`, uncommitted) · Phase 2 🔀 mostly done (`ookla-speedtest`, uncommitted) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -54,9 +54,19 @@ Commit `d54e90c`. No behaviour change. Verified: `yarn lint` clean, every module
 - ✅ `yarn start` (ran nothing) dropped.
 - 🔀 *Not in the plan:* `Dockerfile.service`'s nvm `NODE_VERSION` was bumped to `20.18.1`, because ESLint 9 needs Node 18+ to install. This was superseded when Phase 5 replaced the Dockerfile.
 
-## Phase 2 — Tests ⏳
+## Phase 2 — Tests 🔀 (mostly done)
 
-Not started. `Service/README.md` → Test describes the manual check (lint, one-shot run, query Influx) until this lands.
+Done 2026-10-14 on `ookla-speedtest`, uncommitted: `yarn test` runs 23 tests, 20 pass and 3 are `todo` for known Phase 3 bugs. Verified that a deliberately broken bandwidth conversion makes the suite fail with exit code 1.
+
+- ✅ `node:test` + `node:assert`, `"test": "node --test"`, zero new dependencies. Tests are excluded from the Docker image (`.dockerignore`).
+- ✅ Real fixtures in `Service/Commands/__tests__/fixtures/` (ping ok/unreachable, curl HTTPS/plain HTTP, ifconfig `lo`, an Ookla JSON result), with network-identifying values scrubbed; how each was captured is in its README. Comma-decimal variants are derived in the tests.
+- 🔀 Per-parser tests for all four commands. **Desired-behaviour no-match tests are `todo`, not failing**, so a red run always means a regression: curl `null` fields (#5), `DataUsedCommand` throwing (#1), and a new finding, **`PingCommand` does not normalise comma decimals in round-trip times** (only the loss percentage); the "every parser normalises commas" statement above was not true for ping.
+- ✅ `SpeedTestCommand.execute` tested against a fake `speedtest` on `PATH` (success, and Ookla's real exit-2 failure).
+- 🔀 `baseCommand.test.js` pins the callback contract and records a finding: **`onClose` is called without an exit code, so commands never reject**; every `reject` branch is dead code and failures resolve with the `*Error` metric. Feeds into Phase 3 #1 and the Phase 4 template method.
+- ⏳ `Service/Influx/__tests__/influxWriter.test.js`: needs the Phase 3 #7 constructor change first.
+- ✅ README Test section rewritten (unit tests first, real-InfluxDB check second).
+
+The original plan for this phase, for reference:
 
 Use the built-in `node:test` runner and `node:assert`, so there are zero new dependencies; that is the main payoff of the ESM move. Add `"test": "node --test"` to `Service/package.json`.
 
@@ -66,7 +76,7 @@ Use the built-in `node:test` runner and `node:assert`, so there are zero new dep
 - ⏳ `Service/Influx/__tests__/influxWriter.test.js`: inject a stub write API (see the Phase 3 constructor change) and assert tags become Influx tags and metrics become float fields.
 - ⏳ Extend the README's **Test** section: `yarn test`, how to run a single file (`node --test Commands/__tests__/pingCommand.test.js`), where the fixtures live and how to capture a new one from real CLI output, and a note that the no-match tests fail on purpose until Phase 3.
 
-## Phase 3 — Correctness fixes ⏳ (2 of 8 items done early)
+## Phase 3 — Correctness fixes ⏳ (10 items: 1 done early, 2 partly)
 
 Each of these is a real defect, not a style preference:
 
@@ -74,10 +84,12 @@ Each of these is a real defect, not a style preference:
 2. ⏳ **A command that never closes hangs the run forever.** The promise settles only in the `'close'` handler, and only `SpeedTestCommand` passes a `timeout`. With cron firing `frequent` every minute, one stuck `ping` accumulates processes indefinitely. Give every command a default timeout in `BaseCommand`.
 3. ⏳ **Influx write failures are unhandled.** `influxWriter.storeMetrics` calls `this.writeAPI.flush()` without awaiting the returned promise, and `close()` is never called. *Observed on 2026-10-14:* with a wrong password, the `401 Unauthorized` surfaced as an **unhandled promise rejection that crashed the Node process** (`triggerUncaughtException`), after all points had been logged as "Writing timeseries". Make `storeMetrics` await, add a `close()` method, and have `runCommands` in `index.js` await all writes then close, with one flush for the whole batch instead of one HTTP round trip per point. Log a write failure clearly, without a crash.
 4. ⏳ **Garbage points on a malformed result.** `runCommands` pushes whatever it catches into `outputs`, then unconditionally calls `storeMetrics(output.metricName, ...)`. A non-metric throw yields `storeMetrics(undefined, undefined, undefined)` and a fieldless point. Guard on `metricName` being present and log a skip.
-5. ⏳ **`null` field values.** `CurlCommand` and `SpeedTestCommand` assign `match && match[1]`, so a non-match writes `null` into `floatField`. Omit unmatched fields instead, and emit the `*Error` measurement when nothing parsed.
+5. 🔀 **`null` field values.** `CurlCommand` assigns `match && match[1]`, so a non-match writes `null` into `floatField`. Omit unmatched fields instead, and emit the `*Error` measurement when nothing parsed. *`SpeedTestCommand` is already fixed: the Ookla JSON parser omits missing values. Curl's case is pinned by a `todo` test.*
 6. ✅ **Broken log rotation**, fixed in Phase 5 (`1321bc7`) because cron is still in use: `cron-job-smart-home` now copies `cron2.log` to `/var/log/cron2.log.bak` instead of the non-existent `/var/cron/log2.bak`.
 7. ⏳ Make `InfluxWriter`'s constructor accept its config/client so it is injectable for the Phase 2 test, rather than reading `process.env` at module scope.
 8. 🔀 **Half done.** The `INFLUS_PASS` typo in `Service/.env.template` was fixed in Phase 5, because compose now reads that same file. ⏳ Still missing: `WAN_INTERFACE` (used by `DataUsedCommand`) in the template.
+9. ⏳ **Commands never reject** *(found by the Phase 2 tests)*. `BaseCommand._execute` calls `onClose()` without the exit code, so the `if (error) reject(...)` branch in every command is dead code: a failed command resolves with its `*Error` metric. The written data is correct today, but `runCommands`' `catch` never sees a command failure, and any future code relying on rejection would silently break. Pass the exit code to `onClose`, or settle the promise from the `exec` callback (fold into #1 and the Phase 4 template method). `baseCommand.test.js` pins the current behaviour and must change with the fix.
+10. ⏳ **Ping round-trip times keep comma decimals** *(found by the Phase 2 tests)*. `PingCommand.parseOutput` normalises the loss percentage but not `min`/`avg`/`max`/`mdev`, so under a comma-decimal locale `floatField` gets `"9,028"`. Apply the same `.replace(',', '.')`. Pinned by a `todo` test.
 
 ## Phase 4 — Architecture ⏳
 
@@ -119,7 +131,7 @@ Commit `1321bc7`. Verified end to end on 2026-10-14; see Verification below.
 
 ## Dashboard v2.0 ✅ (not in the original plan)
 
-Done 2026-10-14 at the user's request, not yet committed. The original dashboard is kept as **v1.0**.
+Done 2026-10-14 at the user's request, committed as `1900b40` on `dashboard-v2`. The original dashboard is kept as **v1.0**.
 
 - ✅ **Service: more measurements.** `CurlCommand.parseOutput` now stores all cumulative curl timings (`namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`; previously only the first and last), and `SpeedTestCommand.parseOutput` stores the speed test's `ping`. Existing field names are unchanged, so v1.0 is unaffected. Same parsing pattern as before, including comma decimals; the Phase 3 `null`-field fix applies to the new fields too.
 - ✅ **v1.0** (`ping-all-sensors-v1.0.json`, uid `1ojbtE-Mz`): renamed file, title `… v1.0`, tags `smart-home`/`v1.0`, header link to the other `smart-home` dashboards. Panels unchanged.
@@ -128,6 +140,52 @@ Done 2026-10-14 at the user's request, not yet committed. The original dashboard
 - ✅ **Tested** on an isolated stack (ports 18086/13000) with 24 h of synthetic data planted with known problems: a healthy node with one just-below-plan speed test each way; a node with bad Wi-Fi (high router latency, jitter, loss bursts, speeds below plan, curl failures); a node with a 20-minute internet outage, a failed speed test and 2 hours of silence. Every panel query was run through Grafana's query API and checked against the planted values, and the dashboard was screenshotted and reviewed. The review found and fixed: a dead node not being flagged (now *Reports in last 10 min* = 0, red), the 20-minute outage invisible in the reachability grid (now 5-minute cells), an unreadable loss chart and grid legend, a truncated speed table and legends, and an unmatched column override. A real service batch built from the modified code then wrote the new curl timings and speed-test ping end to end.
 - ⏳ **Not verified:** the light theme (only dark was screenshotted). By design, outages shorter than one grid cell (5 minutes at 24 h) appear only under *Failures over time*.
 - ⏳ **To take effect on a Pi:** rebuild and restart its service (`docker compose up -d --build` in `Service/`). Until then, *Where page-load time goes* and *Speed test ping* stay empty for that node.
+
+## Ookla speed test 🔀 (not in the original plan)
+
+Started 2026-10-14 at the user's request on branch `ookla-speedtest`; uncommitted. Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
+
+- ✅ `Service/Dockerfile.service`: Debian `speedtest-cli` (and the Python it pulled in) removed; Ookla CLI 1.2.0 downloaded per architecture (amd64, arm64, armhf) and verified against a pinned SHA-256.
+- ✅ `SpeedTestCommand`: runs `speedtest --accept-license --accept-gdpr --format=json --progress=no` (plus `--server-id` when `SPEED_TEST_SERVER_ID` is set; only digits are passed to the shell). Parses JSON; `download`/`upload` converted from bytes/s to Mbit/s and `ping` kept, so both dashboards work unchanged. New fields: `jitter`, `packetLoss`, `downloadLatency`, `uploadLatency` (loaded latency), `serverId`. Missing values are omitted instead of written as `null`; non-JSON output logs and writes no fields.
+- ✅ Schedule unchanged: one test per Pi per hour at its own `SPEED_TEST_MINUTE`; the template and README now say to spread them evenly (3 Pis: 0, 20, 40). New optional `SPEED_TEST_SERVER_ID`.
+- ✅ Verified: lint; parser against a real Ookla JSON result, a result without `packetLoss`, and non-JSON output; the command builder with and without a server ID, and with a non-numeric one.
+- ⏳ **Not verified (user is testing end to end):** the Docker build (download + checksum check), the binary running inside the container, a real cron-driven run writing to InfluxDB, armhf/arm64 builds.
+- ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
+
+## Bugs found during testing
+
+Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0, the Ookla switch and the Phase 2 unit tests), in one place. Code bugs that are still open are also numbered in Phase 3, where they will be fixed.
+
+**Fixed**
+
+| Bug | Found by | Fix |
+| --- | --- | --- |
+| The official `influxdb:1.8` image runs `CREATE DATABASE` without quoting the name, so `smart-home-db` (hyphens) fails and the service user is never created; every write gets `401`. | Phase 5 fresh-install test | Mounted init script `Infrastructure/influxdb/init/create-db-and-user.sh` (`1321bc7`) |
+| `Service/.dockerignore` didn't exclude `.env`, so images pushed to Docker Hub contained the InfluxDB password. | Phase 5 review | Excluded (`1321bc7`). ⏳ Rotate the password if those images were public. |
+| Log rotation copied to the non-existent `/var/cron/log2.bak`. | Phase 5 review | Phase 3 #6 (`1321bc7`) |
+| sivel's `speedtest-cli` under-reports a gigabit line by ~20 % (675–707 Mbit/s vs 883 from Ookla on the same machine and connection). | Comparing tools | Switched to Ookla's CLI (`ookla-speedtest`, not yet tested end to end) |
+| Speed test `null` fields when output didn't match. | Phase 2 tests | Ookla JSON parser omits missing values (Phase 3 #5, speed-test half) |
+| Dashboard v2.0 before release: a dead node wasn't flagged, a 20-minute outage was invisible in the reachability grid, the loss chart and grid legend were unreadable, the speed table and legends were cut off, and the "below plan" columns weren't colored. | Synthetic-data test and screenshot review | Fixed before commit (`1900b40`) |
+
+**Open**
+
+| Bug | Found by | Severity | Where it gets fixed |
+| --- | --- | --- | --- |
+| A failed InfluxDB write (e.g. `401`) is an unhandled promise rejection that **crashes the Node process** after logging the points as written; that batch's data is lost. | Manual run with a wrong password | High | Phase 3 #3 |
+| Commands never reject: `onClose()` gets no exit code, so every `reject` branch is dead code. | Phase 2 tests | Medium | Phase 3 #9 |
+| `PingCommand` doesn't normalise comma decimals in round-trip times (only in the loss percentage). Documentation said all parsers did. | Phase 2 tests | Medium (only under a comma-decimal locale) | Phase 3 #10 |
+| `CurlCommand` writes `null` fields when output doesn't match. | Phase 2 tests (`todo`) | Medium | Phase 3 #5 |
+| `DataUsedCommand.parseOutput` throws a `TypeError` on unrecognised output. | Phase 2 tests (`todo`) | Low while disabled | Phase 3 #1 |
+| The migration steps in `Infrastructure/README.md` were followed on a **fresh** install; their `SET PASSWORD` set the service user's password to `haslo`, and Grafana and the service failed with `authorization failed` until it was reset by hand. | Real deployment on the dev machine | Medium (docs) | Docs follow-up under Phase 5: say the migration is only for databases created by the old scripts, and read passwords from `.env` instead of typing them. |
+| Ookla's apt repository has no Ubuntu 24.04 (noble) release (`404`), yet its install script reports success; the broken source then makes every `apt update` fail. Ookla's package also conflicts with sivel's `speedtest-cli`, which installs the same `/usr/bin/speedtest`. | Local install on Ubuntu 24.04 | Low (local runs only; the Docker image downloads the binary directly) | Docs: `Service/README.md` should give the `jammy` workaround or the static binary, and say to remove `speedtest-cli` first. |
+| Each speed test saturates the connection for ~25 s, so ping and curl results from that minute, on **every** node, show inflated latency, and the dashboard doesn't mark them. | Ookla data-cost/interference review | Low | Phase 4 scheduler: skip or tag the `frequent` batch during the node's own test. Other nodes' tests can only be shown, e.g. as Grafana annotations. |
+| An Ookla failure records only `count = 1`; the reason (a JSON log message on stderr) is lost. | Real failure captured for the tests | Low | With Phase 3 #1: store the message, e.g. as a tag with low cardinality, or log it. |
+| Ookla prints its licence notice on stderr on every run, which fills `cron2.log`. | Real Ookla runs | Cosmetic | Redirect or filter stderr when it's not an error. |
+| Dashboard v2.0 "Failures (last hour)" only shows tiles for failure types that happened; there are no `0` tiles for the others. | Dashboard v2.0 review | Cosmetic | A future dashboard version |
+| Dashboard v2.0 reachability grid: outages shorter than one cell (5 min at 24 h) aren't visible there (they are under *Failures over time*), and the first slice before the range can be a clipped false "no reply". | Dashboard v2.0 test | Low, by design | Documented in the panel description |
+| InfluxDB's healthcheck passes against the temporary server it runs during first-start setup, so connections can be refused for a few seconds right after the very first start. | Phase 5 fresh-install test | Low, first start only | Documented in `Infrastructure/README.md` → Troubleshooting |
+| Grafana 12 logs that anonymous Admin access is deprecated; a future version will limit anonymous users to Viewer, which would make the dashboards read-only without a login. | Phase 5 Grafana logs | Low, future | Decide on a login before upgrading Grafana |
+| Dashboard v1.0 (kept as-is): speed gauges turn red when the connection is *fast* (default "red above 80"), no units, a hardcoded router IP (`192.168.192.1`) mixes the router into internet averages, and a fixed `SensorID` list (`pi3,pi4,pi5`) hides other nodes. | Dashboard analysis | Superseded by v2.0 | Not fixing; v1.0 stays for comparison |
 
 ---
 

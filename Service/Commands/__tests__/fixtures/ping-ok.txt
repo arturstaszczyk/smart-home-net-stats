@@ -1,0 +1,11 @@
+PING google.com (142.250.109.101) 56(84) bytes of data.
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=1 ttl=113 time=9.38 ms
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=2 ttl=113 time=13.9 ms
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=3 ttl=113 time=9.17 ms
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=4 ttl=113 time=9.20 ms
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=5 ttl=113 time=9.03 ms
+64 bytes from zr-in-f101.1e100.net (142.250.109.101): icmp_seq=6 ttl=113 time=14.0 ms
+
+--- google.com ping statistics ---
+6 packets transmitted, 6 received, 0% packet loss, time 5022ms
+rtt min/avg/max/mdev = 9.028/10.783/14.007/2.247 ms
