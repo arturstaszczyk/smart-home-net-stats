@@ -1,17 +1,17 @@
 # smart-home-net-stats
 
-Self-hosted home network monitoring for Raspberry Pis. Each Pi pings and curls a few targets every minute and runs a speed test once an hour. The results go to InfluxDB and are charted in Grafana.
+This project monitors a home network with Raspberry Pis. Each Pi sends ping and curl requests to some targets every minute. Each Pi also does a speed test one time each hour. InfluxDB keeps the results, and Grafana shows them in charts.
 
-The two parts are deployed independently, each with its own `docker-compose.yml` and `.env`:
+The project has two parts. You install each part separately. Each part has its own `docker-compose.yml` file and its own `.env` file.
 
-| Part | Runs on | What it is | Docs |
+| Part | Where it runs | What it is | Instructions |
 | --- | --- | --- | --- |
-| `Infrastructure/` | One infrastructure host, nothing else runs there | InfluxDB + Grafana, with the provisioned datasource and dashboard | [Infrastructure/README.md](Infrastructure/README.md) |
-| `Service/` | Every measuring Pi | The Node.js agent that measures and writes to InfluxDB over the LAN | [Service/README.md](Service/README.md) |
+| `Infrastructure/` | One infrastructure host. No other part of the project runs on this host. | InfluxDB and Grafana, with the datasource and the dashboards | [Infrastructure/README.md](Infrastructure/README.md) |
+| `Service/` | Each Pi that does measurements | The Node.js agent. It does the measurements and writes the results to InfluxDB through the LAN. | [Service/README.md](Service/README.md) |
 
 ## Quick start
 
-On the infrastructure host:
+On the infrastructure host, do these commands:
 
 ```bash
 cd Infrastructure
@@ -20,9 +20,9 @@ sudo mkdir -p /var/lib/smart-home/{influx,grafana} && sudo chown 472:472 /var/li
 docker compose up -d --wait
 ```
 
-Grafana is then on `http://<infrastructure host>:3000`.
+Grafana is then available at `http://<infrastructure host>:3000`.
 
-On every measuring Pi:
+On each Pi that does measurements, do these commands:
 
 ```bash
 cd Service
@@ -31,6 +31,6 @@ sudo mkdir -p /var/lib/smart-home/service
 docker compose up -d --build
 ```
 
-Upgrading from the old `*-build.sh` / `*-run.sh` scripts needs a one-time InfluxDB migration (authentication is now enforced). See [Infrastructure/README.md → Migrating](Infrastructure/README.md#migrating-from-the-old-scripts).
+If you used the old `*-build.sh` and `*-run.sh` scripts before, a migration of InfluxDB is necessary one time. The reason is that InfluxDB now checks the user name and password. Refer to [Infrastructure/README.md, "Migrate from the old scripts"](Infrastructure/README.md#migrate-from-the-old-scripts).
 
-Planned and completed improvements: [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md).
+For the planned and completed changes, refer to [docs/IMPROVEMENT_PLAN.md](docs/IMPROVEMENT_PLAN.md).

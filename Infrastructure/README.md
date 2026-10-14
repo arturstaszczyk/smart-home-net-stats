@@ -1,11 +1,11 @@
 # Smart Home Net Stats: infrastructure
 
-The storage and charting half of the stack:
+This part of the project keeps the measurement data and shows it in charts:
 
-* **InfluxDB 1.8** (`influxdb:1.8.10`, official image) stores the time series the service writes.
-* **Grafana** (`grafana/grafana:12.0.2`) charts them. Its datasource and the dashboard are provisioned from files in this directory, so there is nothing to import by hand.
+* **InfluxDB 1.8** (`influxdb:1.8.10`, the official image) keeps the time series that the service writes.
+* **Grafana** (`grafana/grafana:12.0.2`) shows the data in charts. Grafana gets its datasource and its dashboards from files in this directory. Thus, you do not import them manually.
 
-Both run from `docker-compose.yml` in this directory, on one **infrastructure host** that runs nothing else. The measuring service is a separate stack in `../Service/` that runs on the Pis; see `../Service/README.md`.
+The two containers start from `docker-compose.yml` in this directory. They run on one **infrastructure host**, and no other part of the project runs on this host. The service that does the measurements is a different part in `../Service/`, and it runs on the Pis. Refer to `../Service/README.md`.
 
 ```
  Pi (Service/) ──┐
@@ -13,47 +13,49 @@ Both run from `docker-compose.yml` in this directory, on one **infrastructure ho
  Pi (Service/) ──┘          infrastructure host (Infrastructure/)
 ```
 
-## What's in this directory
+## Contents of this directory
 
-| Path | Purpose |
+| Path | Function |
 | --- | --- |
-| `docker-compose.yml` | InfluxDB + Grafana. |
-| `.env.template` | Configuration template; copy to `.env`. |
-| `influxdb/init/create-db-and-user.sh` | Runs once, on the first start with an empty data dir: creates the database and the service user. |
-| `grafana/provisioning/datasources/influxdb.yml` | The InfluxDB datasource (uid `smart-home-influxdb`), configured from `.env`. |
-| `grafana/provisioning/dashboards/smart-home.yml` | Tells Grafana to load every JSON file in `grafana/dashboards/`. |
-| `grafana/dashboards/network-health-v2.0.json` | **Network health v2.0**, the main dashboard (see [Dashboards](#dashboards)). |
-| `grafana/dashboards/ping-all-sensors-v1.0.json` | **Ping dashboard v1.0**, the original dashboard, kept for comparison. |
-| `tools/generate-network-health-dashboard.py` | Generates `network-health-v2.0.json`. Edit this, not the JSON (see [Change a dashboard](#change-a-dashboard)). |
+| `docker-compose.yml` | Starts InfluxDB and Grafana. |
+| `.env.template` | The template for the configuration. Copy it to `.env`. |
+| `influxdb/init/create-db-and-user.sh` | Runs one time, at the first start with an empty data directory. It makes the database and the service user. |
+| `grafana/provisioning/datasources/influxdb.yml` | The InfluxDB datasource (uid `smart-home-influxdb`). It gets its values from `.env`. |
+| `grafana/provisioning/dashboards/smart-home.yml` | Tells Grafana to load each JSON file in `grafana/dashboards/`. |
+| `grafana/dashboards/network-health-v2.0.json` | **Network health v2.0**, the primary dashboard. Refer to [Dashboards](#dashboards). |
+| `grafana/dashboards/ping-all-sensors-v1.0.json` | **Ping dashboard v1.0**, the original dashboard. It stays available for comparison. |
+| `tools/generate-network-health-dashboard.py` | Makes `network-health-v2.0.json`. Change this script, not the JSON file. Refer to [Change a dashboard](#change-a-dashboard). |
 
-## Prerequisites
+## Requirements
 
-* Docker with the Compose plugin (`docker compose version`).
-* Supported host architectures: amd64, arm64 and 32-bit arm/v7 (Raspberry Pi OS 32-bit). All three images publish them.
-* Ports **8086** (InfluxDB) and **3000** (Grafana) free on the host.
+* Docker with the Compose plugin. To examine it, do the command `docker compose version`.
+* A host with one of these architectures: amd64, arm64, or 32-bit arm/v7 (Raspberry Pi OS 32-bit). The two images are available for all three.
+* Ports **8086** (InfluxDB) and **3000** (Grafana) must be free on the host.
 
 ## Configure
 
-All configuration lives in `.env` in this directory, copied from `.env.template`. It is git-ignored.
+All of the configuration is in the file `.env` in this directory. Make this file from `.env.template`. Git does not keep this file.
 
 ```bash
 cd Infrastructure
 cp .env.template .env
 ```
 
-| Variable | Purpose |
+| Variable | Function |
 | --- | --- |
-| `DATA_DIR` | Host directory for persistent data, default `/var/lib/smart-home`. InfluxDB uses `influx/`, Grafana `grafana/`. |
-| `INFLUX_DB` | Database name, e.g. `smart-home-db`. |
-| `INFLUX_USER`, `INFLUX_PASS` | The account the service writes with and Grafana reads with. Every Pi's `Service/.env` needs the same values (and the same `INFLUX_DB`). |
-| `INFLUX_ADMIN_USER`, `INFLUX_ADMIN_PASS` | InfluxDB admin, for user management. |
-| `INFLUX_AUTH_ENABLED` | `true` (default). Set to `false` only temporarily; see [Migrating](#migrating-from-the-old-scripts). |
+| `DATA_DIR` | The host directory for the data. The default is `/var/lib/smart-home`. InfluxDB uses `influx/` and Grafana uses `grafana/`. |
+| `INFLUX_DB` | The name of the database, for example `smart-home-db`. |
+| `INFLUX_USER`, `INFLUX_PASS` | The account that the service writes with and that Grafana reads with. The `Service/.env` file on each Pi must have the same values and the same `INFLUX_DB`. |
+| `INFLUX_ADMIN_USER`, `INFLUX_ADMIN_PASS` | The InfluxDB administrator. Use this account to manage users. |
+| `INFLUX_AUTH_ENABLED` | `true` (the default). Set it to `false` only for a short time. Refer to [Migrate from the old scripts](#migrate-from-the-old-scripts). |
 
-`INFLUX_DB`, `INFLUX_USER`, `INFLUX_PASS` and the admin pair are **only applied when InfluxDB starts with an empty data dir**. To change them later, change them in InfluxDB too (see [Manage users](#manage-influxdb-users)). Avoid single quotes (`'`) in passwords; the init script passes them inside InfluxQL quotes.
+InfluxDB uses `INFLUX_DB`, `INFLUX_USER`, `INFLUX_PASS` and the two administrator values **only when it starts with an empty data directory**. If you change these values later, you must also change them in InfluxDB. Refer to [Manage InfluxDB users](#manage-influxdb-users).
 
-## Fresh install
+CAUTION: Do not use single quotes (`'`) in passwords. The initialization script puts the passwords between InfluxQL quotes.
 
-From this `Infrastructure/` directory:
+## New installation
+
+Do these commands in this `Infrastructure/` directory:
 
 ```bash
 sudo mkdir -p /var/lib/smart-home/influx /var/lib/smart-home/grafana
@@ -62,13 +64,15 @@ cp .env.template .env && nano .env                  # set the passwords
 docker compose up -d --wait
 ```
 
-On first start InfluxDB creates the admin, the database and the service user, then restarts. `--wait` returns once InfluxDB reports healthy. Grafana takes about 10 more seconds to answer on `http://<host>:3000`.
+At the first start, InfluxDB makes the administrator, the database and the service user. Then InfluxDB starts again. The command `--wait` stops when InfluxDB is healthy. Grafana starts to reply at `http://<host>:3000` approximately 10 seconds later.
 
-## Migrating from the old scripts
+## Migrate from the old scripts
 
-The old setup (`infrastructure-run.sh`) ran InfluxDB with **authentication disabled** and created only a non-admin user. Turning authentication on with no admin locks out every request, including creating an admin. So the migration briefly runs with auth off to create one. The data in `/var/lib/smart-home/influx` is used as-is. Run the steps from this `Infrastructure/` directory.
+Do this procedure only if InfluxDB has a database that the old scripts made. Do not do this procedure for a new installation.
 
-1. **Stop and remove the old containers and network.** Data lives on the host, so this doesn't touch it:
+The old configuration (`infrastructure-run.sh`) ran InfluxDB **without authentication**. It made only a user that is not an administrator. If you start authentication when there is no administrator, InfluxDB refuses all requests. It also refuses the request that makes an administrator. Thus, the procedure starts InfluxDB without authentication for a short time to make an administrator. InfluxDB uses the data in `/var/lib/smart-home/influx` without changes. Do the steps in this `Infrastructure/` directory.
+
+1. **Stop and remove the old containers and the old network.** The data is on the host, thus these commands do not change the data:
 
    ```bash
    docker stop grafana influxdb
@@ -76,17 +80,17 @@ The old setup (`infrastructure-run.sh`) ran InfluxDB with **authentication disab
    docker network rm smart-home
    ```
 
-   If an old `smart-home-service` container also runs on this host, remove it too (`docker stop smart-home-service && docker rm smart-home-service`). The service doesn't run on the infrastructure host any more.
+   If an old `smart-home-service` container also runs on this host, remove it (`docker stop smart-home-service && docker rm smart-home-service`). The service does not run on the infrastructure host now.
 
-2. **Back up the data directory:**
+2. **Make a backup of the data directory:**
 
    ```bash
    sudo cp -a /var/lib/smart-home /var/lib/smart-home.bak-$(date +%F)
    ```
 
-3. **Create `.env`** from `.env.template`. Keep `INFLUX_DB=smart-home-db` and `INFLUX_USER=smart-home-user` (the names the old init created), set a **new** `INFLUX_PASS` and the admin pair.
+3. **Make the `.env` file** from `.env.template`. Keep `INFLUX_DB=smart-home-db` and `INFLUX_USER=smart-home-user`. These are the names that the old scripts made. Set a **new** `INFLUX_PASS`. Set the two administrator values.
 
-4. **Start InfluxDB once with auth off**, create the admin and replace the old password (it was committed in the repository):
+4. **Start InfluxDB one time without authentication.** Make the administrator. Replace the old password, because the old password is in the history of the repository:
 
    ```bash
    INFLUX_AUTH_ENABLED=false docker compose up -d --wait influxdb
@@ -94,32 +98,34 @@ The old setup (`infrastructure-run.sh`) ran InfluxDB with **authentication disab
    docker compose exec influxdb influx -execute "SET PASSWORD FOR \"smart-home-user\" = '<INFLUX_PASS>'"
    ```
 
-5. **Start InfluxDB and Grafana with auth on:**
+   CAUTION: Use the same password as `INFLUX_PASS` in `.env`. If the two passwords are different, Grafana and the service cannot write or read data.
+
+5. **Start InfluxDB and Grafana with authentication:**
 
    ```bash
    docker compose up -d --wait
    ```
 
-6. **Update every Pi's `Service/.env`** with the new `INFLUX_PASS` and restart its service (see `../Service/README.md`). Until you do, their writes fail with `401 Unauthorized`.
+6. **Put the new `INFLUX_PASS` in the `Service/.env` file on each Pi.** Then start the service on each Pi again (refer to `../Service/README.md`). Until you do this step, the Pis cannot write data. They get the error `401 Unauthorized`.
 
-7. **Clean up Grafana.** Provisioning takes over the existing dashboard (same uid) and points it at the new `smart-home-influxdb` datasource. The old manually-created datasources (e.g. `SmartHome`) are no longer used. Delete them under *Connections → Data sources* once the dashboard shows data.
+7. **Remove the old Grafana datasources.** Grafana uses the provisioned dashboard in place of the old dashboard, because the two dashboards have the same uid. The provisioned dashboard uses the new `smart-home-influxdb` datasource. Grafana does not use the old datasources that you made manually (for example `SmartHome`). When the dashboard shows data, delete the old datasources in *Connections → Data sources*.
 
-8. Run the [checks](#test) below.
+8. Do the [tests](#test) that follow.
 
-## Run and operate
+## Operation
 
-All commands run from this `Infrastructure/` directory.
+Do all of these commands in this `Infrastructure/` directory.
 
 | Task | Command |
 | --- | --- |
-| Start / apply `.env` or compose changes | `docker compose up -d --wait` |
-| Status | `docker compose ps` |
-| Logs | `docker compose logs -f influxdb grafana` |
-| Restart one container | `docker compose restart grafana` |
-| Stop (keeps data) | `docker compose down` |
-| Upgrade images after changing a tag in `docker-compose.yml` | `docker compose pull && docker compose up -d --wait` |
+| Start, or apply changes to `.env` or to the compose file | `docker compose up -d --wait` |
+| Show the status | `docker compose ps` |
+| Show the logs | `docker compose logs -f influxdb grafana` |
+| Start one container again | `docker compose restart grafana` |
+| Stop (the data stays) | `docker compose down` |
+| Get new images after you change a tag in `docker-compose.yml` | `docker compose pull && docker compose up -d --wait` |
 
-Containers restart automatically (`restart: unless-stopped`), including after a reboot.
+The containers start again automatically (`restart: unless-stopped`). They also start again after the host starts.
 
 ### Manage InfluxDB users
 
@@ -129,22 +135,25 @@ docker compose exec influxdb influx -username <admin> -password '<admin pass>'
 > SET PASSWORD FOR "smart-home-user" = 'new-password'
 ```
 
-After changing `INFLUX_PASS`, update `.env` here (Grafana reads it at start: `docker compose up -d grafana`) and `Service/.env` on every Pi.
+If you change `INFLUX_PASS`, also change it in these two locations:
+
+1. In `.env` in this directory. Then do `docker compose up -d grafana`, because Grafana reads the password when it starts.
+2. In `Service/.env` on each Pi.
 
 ## Dashboards
 
-Both are provisioned from `grafana/dashboards/`, tagged `smart-home` plus their version, and linked to each other in the dashboard header.
+Grafana loads the two dashboards from `grafana/dashboards/`. Each dashboard has the tag `smart-home` and a tag for its version. Each dashboard has a link to the other dashboard at the top.
 
 ### Network health v2.0
 
-Read top-down, from "is everything OK right now" to detail. Every panel has an ⓘ description explaining what it shows and what its colors mean.
+Read the dashboard from top to bottom. The top shows the current status. The lower rows show more detail. Each panel has an ⓘ icon. The ⓘ icon tells what the panel shows and what the colors mean.
 
-* **Filters:** *Node* and *Ping target* are filled in from the data, so a new Pi appears on its own. Router vs internet is decided by address: private ranges (`10.*`, `192.168.*`, `172.16–31.*`) count as router/LAN.
-* **Now:** one tile per node for internet latency, router latency, jitter and packet loss (last 15 minutes), the last download and upload, the number of speed tests below plan, and failures in the last hour. *Last report per node* shows when each node last wrote data; **0 reports in the last 10 minutes (red) means a node has stopped**.
-* **Latency:** internet vs router latency per node (both high on one node: its Wi-Fi/LAN; only internet high everywhere: the ISP), jitter, packet loss, and latency per target for each node.
-* **Reliability:** a grid of node × target over time (green no loss, orange some loss, red heavy loss, dark red no reply), which catches outages of 5 minutes or more at the 24 h view. Failures over time and per node.
-* **Web response:** page-load time per URL for each node, where page-load time goes (DNS, connect, TLS, server wait, transfer) and DNS lookup time.
-* **Bandwidth:** download and upload per node with the below-plan band shaded, a speed-vs-plan table per node, and the speed test's own ping.
+* **Filters:** The *Node* and *Ping target* lists get their values from the data. Thus, a new Pi shows automatically. The address tells if a target is the router or the internet. Private address ranges (`10.*`, `192.168.*`, `172.16–31.*`) are the router or the LAN.
+* **Now:** For each node, there is one tile for each of these values: internet latency, router latency, jitter and packet loss (last 15 minutes). Other tiles show the last download and the last upload. Two more tiles show the speed tests below the plan and the failures in the last hour. The table *Last report per node* shows when each node wrote data last. **If a node has 0 reports in the last 10 minutes (red), the node has stopped.**
+* **Latency:** This row compares internet latency and router latency for each node. If the two values are high on one node, the problem is the Wi-Fi or the LAN of that node. If only the internet latency is high on all nodes, the problem is the ISP. The row also shows jitter, packet loss and the latency for each target.
+* **Reliability:** A grid shows each node and target over time. Green is no loss, orange is some loss, red is heavy loss, and dark red is no reply. At the 24-hour view, the grid shows all outages of 5 minutes or longer. The row also shows the failures over time and the failures for each node.
+* **Web response:** This row shows the time to load each URL for each node. It also shows how that time divides into steps (DNS, connect, TLS, server wait, transfer) and the DNS lookup time.
+* **Bandwidth:** This row shows the download and the upload for each node. A shaded band shows the area below the plan. A table compares the speed of each node with the plan. The row also shows the ping that the speed test measures.
 
 Thresholds:
 
@@ -156,57 +165,64 @@ Thresholds:
 | Download (plan 1000 Mbit/s −10 %) | ≥ 900 Mbit/s | 500–900 | < 500 |
 | Upload (plan 100 Mbit/s −10 %) | ≥ 90 Mbit/s | 50–90 | < 50 |
 
-The plan is set once at the top of the generator (`PLAN_DOWNLOAD`, `PLAN_UPLOAD`, `TOLERANCE`); the below-plan (900 / 90) and far-below (500 / 50) thresholds, queries, axis limits and panel descriptions are derived from it. If your plan changes, edit those three values and regenerate.
+The plan is set one time, at the top of the generator script (`PLAN_DOWNLOAD`, `PLAN_UPLOAD`, `TOLERANCE`). The script calculates the thresholds from the plan (900 / 90 and 500 / 50). It also calculates the queries, the axis limits and the panel descriptions. If your plan changes, change these three values. Then make the dashboard again.
 
-Node colors are fixed for `pi3` (blue), `pi4` (orange) and `pi5` (aqua), chosen to stay distinguishable for colorblind readers. Other node names get a stable color from Grafana's palette; to pin one, add it to `NODE_COLORS` in the generator.
+The node colors are fixed for `pi3` (blue), `pi4` (orange) and `pi5` (aqua). Persons who are colorblind can also see the difference between these colors. Grafana gives a color to each other node name, and this color does not change. To set a color for a node, add the node to `NODE_COLORS` in the generator script.
 
-*Where page-load time goes* and *Speed test ping* need the service version that stores the extended curl timings and the speed test's ping. Older nodes simply don't appear in those two panels.
+The panels *Where page-load time goes* and *Speed test ping* use data that only the newer service version writes. Older nodes do not show in these two panels.
 
 ### Ping dashboard v1.0
 
-The original dashboard, unchanged except for its title, tags and the header link. Its `SensorID` dropdown is a fixed list (`pi3,pi4,pi5`); other node names don't appear in its filtered panels.
+This is the original dashboard. Only its title, its tags and the link at the top are different. Its `SensorID` list has fixed values (`pi3,pi4,pi5`). Thus, its filtered panels do not show other node names.
 
 ### Change a dashboard
 
-The files in `grafana/dashboards/` are what Grafana loads; it won't save UI edits to a provisioned dashboard. Grafana picks up a changed file within 30 seconds, with no restart.
+Grafana loads the files in `grafana/dashboards/`. Grafana does not save changes that you make to these dashboards in the user interface. When a file changes, Grafana loads it again in 30 seconds or less. It is not necessary to start Grafana again.
 
-**v2.0 is generated.** Edit `tools/generate-network-health-dashboard.py`, then regenerate from the repository root (Python 3, standard library only):
+**A script makes v2.0.** To change v2.0, do these steps:
 
-```bash
-python3 Infrastructure/tools/generate-network-health-dashboard.py
-```
+1. Change `tools/generate-network-health-dashboard.py`.
+2. In the root directory of the repository, do this command (Python 3 with only the standard library is necessary):
 
-It overwrites `grafana/dashboards/network-health-v2.0.json`; commit both files. Don't edit the JSON by hand or replace it with a Grafana export, since the next regeneration would undo that. To try a change in the UI first, edit a copy (*Save as*), then carry the change over into the generator. The script is organised by dashboard row, with small helpers (`stat`, `timeseries`, `steps`, …) and the shared constants at the top: plan, colors, and the private-address pattern that decides router vs internet.
+   ```bash
+   python3 Infrastructure/tools/generate-network-health-dashboard.py
+   ```
 
-**v1.0 is a plain export.** To change it:
+3. The script writes `grafana/dashboards/network-health-v2.0.json` again. Commit the two files.
 
-1. Edit in Grafana, then *Share → Export → Save to file* (leave "Export for sharing externally" **off**).
-2. Replace `grafana/dashboards/ping-all-sensors-v1.0.json` with the export. Keep the datasource uid `smart-home-influxdb` and the dashboard's `uid`.
+CAUTION: Do not change the JSON file manually. Do not replace it with an export from Grafana. The next run of the script removes these changes.
 
-For a new version of either, save it as a new file with a new `uid`, title and version tag (for a generated one, a new generator script or output name), so the previous version stays available.
+To try a change in the user interface first, change a copy of the dashboard (*Save as*). Then put the change into the script. The script has one part for each row of the dashboard. It has small helper functions (`stat`, `timeseries`, `steps`, …). The shared values are at the top: the plan, the colors, and the address pattern that tells the router from the internet.
 
-To check a v2.0 change, open the dashboard after regenerating and confirm the changed panels show data and no errors; every panel's ⓘ describes what it should show. A change to a query is best checked against data with known problems, such as a test stack on other ports seeded with synthetic points (the approach used to test v2.0, see `docs/IMPROVEMENT_PLAN.md`).
+**v1.0 is a usual export.** To change v1.0, do these steps:
 
-Panels query the measurements `ping`, `pingError`, `curl`, `curlError`, `speedtest` and `speedtest-error` by name.
+1. Change the dashboard in Grafana. Then select *Share → Export → Save to file*. Do not select "Export for sharing externally".
+2. Replace `grafana/dashboards/ping-all-sensors-v1.0.json` with the export. Keep the datasource uid `smart-home-influxdb` and the `uid` of the dashboard.
+
+To make a new version of a dashboard, save it in a new file. Give it a new `uid`, a new title and a new version tag. For a dashboard that a script makes, use a new script or a new output name. Thus, the previous version stays available.
+
+To examine a change to v2.0, open the dashboard after the script runs. Make sure that the changed panels show data and no errors. The ⓘ icon of each panel tells what the panel must show. To examine a change to a query, use data that has known problems. For example, use a test installation on different ports with data that you write for the test. This is the method that the test of v2.0 used. Refer to `docs/IMPROVEMENT_PLAN.md`.
+
+The panels use the names of the measurements `ping`, `pingError`, `curl`, `curlError`, `speedtest` and `speedtest-error`.
 
 ## Build
 
-Nothing to build: InfluxDB and Grafana are official images, pinned in `docker-compose.yml`. The only built image is the service, which is built on or for the Pis; see `../Service/README.md`.
+It is not necessary to build an image. InfluxDB and Grafana are official images, and `docker-compose.yml` sets their versions. Only the service has an image that you build, on the Pis or for the Pis. Refer to `../Service/README.md`.
 
 ## Test
 
-After any change, from this `Infrastructure/` directory:
+After each change, do these tests in this `Infrastructure/` directory:
 
-1. **Containers are up:** `docker compose ps` shows `influxdb` as `healthy` and `grafana` as `Up`.
+1. **Make sure that the containers run.** The command `docker compose ps` shows `influxdb` as `healthy` and `grafana` as `Up`.
 
-2. **Auth is enforced.** An anonymous query must be rejected:
+2. **Make sure that InfluxDB checks the user name and password.** InfluxDB must refuse a query without a user name:
 
    ```bash
    curl -s 'http://localhost:8086/query?q=SHOW+DATABASES'
    # {"error":"unable to parse authentication credentials"}
    ```
 
-3. **The service account can read data:**
+3. **Make sure that the service account can read data:**
 
    ```bash
    source .env
@@ -214,33 +230,36 @@ After any change, from this `Infrastructure/` directory:
      -execute 'SELECT * FROM ping ORDER BY time DESC LIMIT 5'
    ```
 
-   Expect recent rows for each `computerTag` (one per Pi), with `address` and `computerTag` as tags and `avg`, `min`, `max`, `mdev` and `packetsPercent` as values. A service writes its first points at the next full minute after starting.
+   The result must show recent rows for each `computerTag` (one for each Pi). `address` and `computerTag` must be tags. `avg`, `min`, `max`, `mdev` and `packetsPercent` must be values. A service writes its first data at the start of the next minute after it starts.
 
-4. **Grafana's datasource works:**
+4. **Make sure that the Grafana datasource operates:**
 
    ```bash
    curl -s http://localhost:3000/api/datasources/uid/smart-home-influxdb/health
    # {"message":"datasource is working. N measurements found","status":"OK"}
    ```
 
-5. **The dashboards render:** open `http://<host>:3000`, open *Network health v2.0*, and check that the panels show data with no "datasource not found" errors. *Last report per node* should list every Pi with a recent time and a green report count.
+5. **Make sure that the dashboards show data.** Open `http://<host>:3000`, then open *Network health v2.0*. Make sure that the panels show data and no "datasource not found" errors. The table *Last report per node* must show each Pi with a recent time and a green number of reports.
 
-## Security notes
+## Security
 
-* **InfluxDB is reachable on port 8086 from your LAN** (the Pis need it), and authentication is on. Anyone on the LAN without the credentials gets nothing.
-* **Grafana has no login:** anonymous visitors are Admins, which was already the case before. Grafana 12 logs `auth.anonymous.org_role is deprecated` for this, and a future version will limit anonymous users to Viewer. Don't expose port 3000 beyond your LAN.
-* Grafana reads InfluxDB with the same account the service writes with, which has full rights on the database.
+* **The Pis must connect to InfluxDB on port 8086 through your LAN.** InfluxDB checks the user name and password. A person on the LAN without them cannot read or write data.
+* **Grafana does not ask for a login.** All visitors are administrators. This was also true before. Grafana 12 writes the warning `auth.anonymous.org_role is deprecated` for this configuration. A future Grafana version will let anonymous visitors only read dashboards.
+
+  WARNING: Do not make port 3000 available outside your LAN. All visitors are administrators and can change Grafana.
+
+* Grafana reads InfluxDB with the same account that the service writes with. This account has full rights on the database.
 
 ## Troubleshooting
 
-**Service logs `401 Unauthorized` / `authorization failed`.** The service's `INFLUX_USER`/`INFLUX_PASS` don't match an InfluxDB user. Check with `SHOW USERS` (see [Manage users](#manage-influxdb-users)). On an existing install, follow the [migration](#migrating-from-the-old-scripts).
+**The service log shows `401 Unauthorized` or `authorization failed`.** The `INFLUX_USER` or `INFLUX_PASS` of the service is not correct for an InfluxDB user. Examine the users with `SHOW USERS` (refer to [Manage InfluxDB users](#manage-influxdb-users)). If InfluxDB has a database from the old scripts, do the [migration](#migrate-from-the-old-scripts).
 
-**Every request says `error authorizing query: no user provided`, even with credentials.** Auth is on but no admin user exists. Do step 4 of the [migration](#migrating-from-the-old-scripts).
+**All requests show `error authorizing query: no user provided`, also with a user name and password.** Authentication is on, but there is no administrator. Do step 4 of the [migration](#migrate-from-the-old-scripts).
 
-**`Failed to connect to http://localhost:8086` right after the very first start.** InfluxDB restarts once after creating its database and users. Wait a few seconds.
+**`Failed to connect to http://localhost:8086` immediately after the first start.** InfluxDB starts again one time after it makes its database and users. Wait some seconds.
 
-**Grafana exits with `permission denied` on `/var/lib/grafana`.** The data directory must belong to uid 472: `sudo chown -R 472:472 /var/lib/smart-home/grafana`.
+**Grafana stops with `permission denied` on `/var/lib/grafana`.** The user with uid 472 must own the data directory. Do `sudo chown -R 472:472 /var/lib/smart-home/grafana`.
 
-**Grafana logs `Could not register plugin ... table is already registered`.** Harmless Grafana 12.0 startup noise.
+**The Grafana log shows `Could not register plugin ... table is already registered`.** Grafana 12.0 writes this message when it starts. It does not cause a problem.
 
-**Graphs are blank but the datasource health check is OK.** Check *Last report per node* in v2.0: a node missing there has never written data, and a red count means it stopped. In v1.0, a node also has to be in its fixed `SensorID` list.
+**The charts are empty, but the datasource test is OK.** Look at the table *Last report per node* in v2.0. If a node is not in the table, it has not written data. If a node has a red number, it has stopped. In v1.0, a node must also be in the fixed `SensorID` list.
