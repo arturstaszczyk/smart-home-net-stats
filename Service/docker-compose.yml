@@ -1,0 +1,24 @@
+# The measuring service. Runs on each measuring Pi and writes to InfluxDB on the infrastructure
+# host over the LAN. Configured by .env next to this file (see .env.template); the same .env is
+# used by local `yarn standalone-*` runs.
+name: smart-home-service
+
+services:
+  service:
+    image: ${SERVICE_IMAGE:-smart-home-service}
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    restart: unless-stopped
+    environment:
+      INFLUX_HOST: ${INFLUX_HOST:-}
+      INFLUX_PORT: ${INFLUX_PORT:-8086}
+      INFLUX_DB: ${INFLUX_DB:-}
+      INFLUX_RETENTION: ${INFLUX_RETENTION:-autogen}
+      INFLUX_USER: ${INFLUX_USER:-}
+      INFLUX_PASS: ${INFLUX_PASS:-}
+      ROUTER_1: ${ROUTER_1:-}
+      COMPUTER_NAME: ${COMPUTER_NAME:-}
+      SPEED_TEST_MINUTE: ${SPEED_TEST_MINUTE:-6}
+    volumes:
+      - ${DATA_DIR:-/var/lib/smart-home}/service:/var/log

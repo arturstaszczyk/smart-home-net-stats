@@ -1,0 +1,17 @@
+# The dashboard in ../../dashboards refers to this datasource by its uid.
+apiVersion: 1
+
+datasources:
+  - name: smart-home-influxdb
+    uid: smart-home-influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    editable: false
+    user: $INFLUX_USER
+    jsonData:
+      dbName: $INFLUX_DB
+      httpMode: GET
+    secureJsonData:
+      password: $INFLUX_PASS

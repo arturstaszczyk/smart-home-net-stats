@@ -1,39 +1,19 @@
-FROM ubuntu
-# replace shell with bash so we can source files
-SHELL ["/bin/bash", "--login", "-c"] 
+FROM node:22.21.1-bookworm-slim
 
-RUN apt-get update
-RUN apt-get --no-install-recommends install -y --fix-missing wget gnupg 
-RUN apt-get install -y iputils-ping
-RUN apt-get install -y curl
-RUN apt-get install -y ca-certificates
-RUN apt-get install -y libatomic1
-RUN apt-get install -y python3-distutils
-RUN apt-get install -y vim
-RUN apt-get install -y cron
-
-RUN wget -qO-  https://bootstrap.pypa.io/get-pip.py | python3 
-RUN pip install speedtest-cli
+# ping, curl (timedcurl.sh) and speedtest-cli are what the commands shell out to.
+# speedtest-cli is Debian's package of the sivel Python tool the parser expects.
+# cron schedules the batches until the in-process scheduler replaces it (plan, Phase 4).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        iputils-ping curl ca-certificates speedtest-cli cron \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/smart-home
-COPY ./ /var/smart-home
 
-ENV NVM_DIR /usr/local/nvm
-ENV NODE_VERSION 20.18.1
-RUN mkdir $NVM_DIR
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production && yarn cache clean
 
-RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash
-RUN source $NVM_DIR/nvm.sh \
-    && nvm install $NODE_VERSION \
-    && nvm alias default $NODE_VERSION \
-    && nvm use default
+COPY ./ ./
+RUN chmod +x containerScripts/*.sh timedcurl.sh
 
-ENV NODE_PATH $NVM_DIR/v$NODE_VERSION/lib/node_modules
-ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
-
-RUN node --version
-RUN npm install --global yarn && yarn install
-
-# Run the command on container startup
-RUN chmod +x /var/smart-home/containerScripts/init-container-script.sh
-CMD /var/smart-home/containerScripts/init-container-script.sh
+CMD ["/var/smart-home/containerScripts/init-container-script.sh"]

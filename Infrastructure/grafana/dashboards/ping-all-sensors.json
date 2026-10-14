@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -32,7 +32,7 @@
       "collapsed": false,
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "gridPos": {
         "h": 1,
@@ -46,7 +46,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "refId": "A"
         }
@@ -57,7 +57,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -108,7 +108,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -158,7 +158,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -209,7 +209,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -259,7 +259,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -309,7 +309,7 @@
           "alias": "Download",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -350,7 +350,7 @@
           "alias": "Upload",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -395,7 +395,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -446,7 +446,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -496,7 +496,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -545,7 +545,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -595,7 +595,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fieldConfig": {
         "defaults": {
@@ -645,7 +645,7 @@
           "alias": "",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -699,7 +699,7 @@
       "dashes": false,
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 5,
@@ -740,7 +740,7 @@
           "alias": "",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -834,7 +834,7 @@
       "dashes": false,
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 4,
@@ -878,7 +878,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -968,7 +968,8 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": {
-        "uid": "SmartHome"
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1008,7 +1009,8 @@
         {
           "alias": "",
           "datasource": {
-            "uid": "SmartHome"
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1094,7 +1096,8 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": {
-        "uid": "SmartHome"
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 4,
@@ -1133,7 +1136,8 @@
       "targets": [
         {
           "datasource": {
-            "uid": "SmartHome"
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1223,7 +1227,8 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": {
-        "uid": "SmartHome"
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1262,7 +1267,8 @@
       "targets": [
         {
           "datasource": {
-            "uid": "SmartHome"
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1342,7 +1348,8 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": {
-        "uid": "SmartHome"
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1381,7 +1388,8 @@
       "targets": [
         {
           "datasource": {
-            "uid": "SmartHome"
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1462,7 +1470,7 @@
       "dashes": false,
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1502,7 +1510,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1577,7 +1585,7 @@
       "dashes": false,
       "datasource": {
         "type": "influxdb",
-        "uid": "Gv-wFIiRz"
+        "uid": "smart-home-influxdb"
       },
       "fill": 1,
       "fillGradient": 3,
@@ -1618,7 +1626,7 @@
           "alias": "Download",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {
@@ -1665,7 +1673,7 @@
           "alias": "Upload",
           "datasource": {
             "type": "influxdb",
-            "uid": "Gv-wFIiRz"
+            "uid": "smart-home-influxdb"
           },
           "groupBy": [
             {

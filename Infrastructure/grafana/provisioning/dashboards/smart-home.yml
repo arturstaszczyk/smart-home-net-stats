@@ -1,0 +1,12 @@
+# Loads every dashboard JSON in Infrastructure/grafana/dashboards (mounted at /etc/grafana/dashboards).
+# The files are the source of truth: UI edits can't be saved; export the JSON and replace the file instead.
+apiVersion: 1
+
+providers:
+  - name: smart-home
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

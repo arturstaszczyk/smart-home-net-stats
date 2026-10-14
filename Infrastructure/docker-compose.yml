@@ -1,0 +1,53 @@
+# InfluxDB + Grafana. Runs on the infrastructure host only; the measuring service has its own
+# compose file in ../Service. Configured by .env next to this file (see .env.template).
+name: smart-home-infra
+
+services:
+  influxdb:
+    image: influxdb:1.8.10
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      # Applied only on first start with an empty data dir: the image creates the admin,
+      # then influxdb/init/create-db-and-user.sh creates the DB and the service user.
+      INFLUXDB_ADMIN_USER: ${INFLUX_ADMIN_USER:-}
+      INFLUXDB_ADMIN_PASSWORD: ${INFLUX_ADMIN_PASS:-}
+      SMART_HOME_DB: ${INFLUX_DB:-}
+      SMART_HOME_USER: ${INFLUX_USER:-}
+      SMART_HOME_PASS: ${INFLUX_PASS:-}
+      # Applied on every start.
+      INFLUXDB_HTTP_AUTH_ENABLED: ${INFLUX_AUTH_ENABLED:-true}
+      INFLUXDB_HTTP_FLUX_ENABLED: "true"
+    volumes:
+      - ${DATA_DIR:-/var/lib/smart-home}/influx:/var/lib/influxdb
+      - ./influxdb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      # Read by grafana/provisioning/datasources/influxdb.yml
+      INFLUX_DB: ${INFLUX_DB:-}
+      INFLUX_USER: ${INFLUX_USER:-}
+      INFLUX_PASS: ${INFLUX_PASS:-}
+    volumes:
+      - ${DATA_DIR:-/var/lib/smart-home}/grafana:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
