@@ -7,12 +7,15 @@ export default class CurlCommand extends BaseCommand {
 
     parseOutput(stdout) {
 
-        const curlStats = {}
-        const namelookup = stdout.match(/time_namelookup:\s+([0-9]+[.,][0-9]+)/)
-        const total = stdout.match(/time_total:\s+([0-9]+[.,][0-9]+)/)
+        // Cumulative timings in seconds, in request order. For plain HTTP appconnect is 0,
+        // so per-phase durations should be split at pretransfer, not appconnect.
+        const timings = ['namelookup', 'connect', 'appconnect', 'pretransfer', 'starttransfer', 'total']
 
-        curlStats['namelookup'] = namelookup && namelookup[1].replace(',', '.')
-        curlStats['total'] = total && total[1].replace(',', '.')
+        const curlStats = {}
+        _.forEach(timings, (timing) => {
+            const match = stdout.match(new RegExp(`time_${timing}:\\s+([0-9]+[.,][0-9]+)`))
+            curlStats[timing] = match && match[1].replace(',', '.')
+        })
 
         return curlStats
     }

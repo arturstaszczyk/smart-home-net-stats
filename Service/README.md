@@ -31,7 +31,7 @@ cp .env.template .env && nano .env
 | `INFLUX_DB`, `INFLUX_RETENTION` | Database and retention policy. They are combined into the bucket `<db>/<retention>` (usually `autogen`). |
 | `INFLUX_USER`, `INFLUX_PASS` | InfluxDB credentials. `INFLUX_DB`, `INFLUX_USER` and `INFLUX_PASS` must match `Infrastructure/.env` on the infrastructure host; authentication is enforced. |
 | `ROUTER_1` | Address of your router. It is pinged and curled with the other targets. |
-| `COMPUTER_NAME` | Written as the `computerTag` tag on every point. This is what tells the Pis apart in Grafana; it must be listed in the dashboard's `SensorID` dropdown. |
+| `COMPUTER_NAME` | Written as the `computerTag` tag on every point. This is what tells the Pis apart in Grafana. Dashboard v2.0 picks up new names automatically; v1.0 only shows `pi3`, `pi4`, `pi5`. |
 | `SPEED_TEST_MINUTE` | Minute of the hour at which the container runs the speed test. Give each Pi a different minute so their tests don't compete for bandwidth. |
 | `SERVICE_IMAGE` | Docker only. `smart-home-service` to build locally, or your Docker Hub tag to pull (see [Build](#build)). |
 | `DATA_DIR` | Docker only. Host directory for logs (`<DATA_DIR>/service/`), default `/var/lib/smart-home`. |
@@ -132,6 +132,15 @@ There are no unit tests yet. A test runner (`node --test`) is planned; see `../d
    ```
 
    `address` and `computerTag` should be tags, and `min`/`avg`/`max`/`mdev` float fields. The same check works for the `curl` and `speedtest` measurements.
+
+What each batch writes:
+
+| Measurement | Tags | Fields |
+| --- | --- | --- |
+| `ping` | `address`, `computerTag` | `avg`, `min`, `max`, `mdev` (ms), `packetsPercent`, `packetsSent` |
+| `curl` | `address`, `computerTag` | `namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`: cumulative seconds from the start of the request (`appconnect` is 0 for plain HTTP) |
+| `speedtest` | `computerTag` | `download`, `upload` (Mbit/s), `ping` (ms) |
+| `pingError`, `curlError`, `speedtest-error` | `computerTag` (+ `address`), `error` | `count` = 1 per failed command |
 
 Don't rename measurements or fields (`ping`, `pingError`, `curl`, `curlError`, `speedtest`, `speedtest-error`). The Grafana dashboard queries them by name and silently goes blank.
 

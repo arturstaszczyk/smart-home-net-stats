@@ -5,9 +5,11 @@ export default class SpeedTestCommand extends BaseCommand {
 
     parseOutput(stdout) {
         const speedStats = {}
+        const ping = stdout.match(/Ping: ([0-9]+[.,]{1}[0-9]+)\s+/)
         const download = stdout.match(/Download: ([0-9]+[.,]{1}[0-9]+)\s+/)
         const upload = stdout.match(/Upload: ([0-9]+[.,]{1}[0-9]+)\s+/)
 
+        speedStats['ping'] = ping && ping[1].replace(',', '.')
         speedStats['download'] = download && download[1].replace(',', '.')
         speedStats['upload'] = upload && upload[1].replace(',', '.')
 

@@ -22,7 +22,9 @@ Both run from `docker-compose.yml` in this directory, on one **infrastructure ho
 | `influxdb/init/create-db-and-user.sh` | Runs once, on the first start with an empty data dir: creates the database and the service user. |
 | `grafana/provisioning/datasources/influxdb.yml` | The InfluxDB datasource (uid `smart-home-influxdb`), configured from `.env`. |
 | `grafana/provisioning/dashboards/smart-home.yml` | Tells Grafana to load every JSON file in `grafana/dashboards/`. |
-| `grafana/dashboards/ping-all-sensors.json` | The dashboard. |
+| `grafana/dashboards/network-health-v2.0.json` | **Network health v2.0**, the main dashboard (see [Dashboards](#dashboards)). |
+| `grafana/dashboards/ping-all-sensors-v1.0.json` | **Ping dashboard v1.0**, the original dashboard, kept for comparison. |
+| `tools/generate-network-health-dashboard.py` | Generates `network-health-v2.0.json`. Edit this, not the JSON (see [Change a dashboard](#change-a-dashboard)). |
 
 ## Prerequisites
 
@@ -129,15 +131,63 @@ docker compose exec influxdb influx -username <admin> -password '<admin pass>'
 
 After changing `INFLUX_PASS`, update `.env` here (Grafana reads it at start: `docker compose up -d grafana`) and `Service/.env` on every Pi.
 
-### Change the dashboard
+## Dashboards
 
-The JSON file is the source of truth; Grafana won't save UI edits to a provisioned dashboard. To change it:
+Both are provisioned from `grafana/dashboards/`, tagged `smart-home` plus their version, and linked to each other in the dashboard header.
+
+### Network health v2.0
+
+Read top-down, from "is everything OK right now" to detail. Every panel has an ⓘ description explaining what it shows and what its colors mean.
+
+* **Filters:** *Node* and *Ping target* are filled in from the data, so a new Pi appears on its own. Router vs internet is decided by address: private ranges (`10.*`, `192.168.*`, `172.16–31.*`) count as router/LAN.
+* **Now:** one tile per node for internet latency, router latency, jitter and packet loss (last 15 minutes), the last download and upload, the number of speed tests below plan, and failures in the last hour. *Last report per node* shows when each node last wrote data; **0 reports in the last 10 minutes (red) means a node has stopped**.
+* **Latency:** internet vs router latency per node (both high on one node: its Wi-Fi/LAN; only internet high everywhere: the ISP), jitter, packet loss, and latency per target for each node.
+* **Reliability:** a grid of node × target over time (green no loss, orange some loss, red heavy loss, dark red no reply), which catches outages of 5 minutes or more at the 24 h view. Failures over time and per node.
+* **Web response:** page-load time per URL for each node, where page-load time goes (DNS, connect, TLS, server wait, transfer) and DNS lookup time.
+* **Bandwidth:** download and upload per node with the below-plan band shaded, a speed-vs-plan table per node, and the speed test's own ping.
+
+Thresholds:
+
+| Metric | Green | Orange | Red |
+| --- | --- | --- | --- |
+| Internet latency | < 40 ms | 40–100 ms | ≥ 100 ms |
+| Router latency, jitter | < 10 ms | 10–30 ms | ≥ 30 ms |
+| Packet loss | 0 % | > 0 % | ≥ 5 % |
+| Download (plan 1000 Mbit/s −10 %) | ≥ 900 Mbit/s | 500–900 | < 500 |
+| Upload (plan 100 Mbit/s −10 %) | ≥ 90 Mbit/s | 50–90 | < 50 |
+
+The plan is set once at the top of the generator (`PLAN_DOWNLOAD`, `PLAN_UPLOAD`, `TOLERANCE`); the below-plan (900 / 90) and far-below (500 / 50) thresholds, queries, axis limits and panel descriptions are derived from it. If your plan changes, edit those three values and regenerate.
+
+Node colors are fixed for `pi3` (blue), `pi4` (orange) and `pi5` (aqua), chosen to stay distinguishable for colorblind readers. Other node names get a stable color from Grafana's palette; to pin one, add it to `NODE_COLORS` in the generator.
+
+*Where page-load time goes* and *Speed test ping* need the service version that stores the extended curl timings and the speed test's ping. Older nodes simply don't appear in those two panels.
+
+### Ping dashboard v1.0
+
+The original dashboard, unchanged except for its title, tags and the header link. Its `SensorID` dropdown is a fixed list (`pi3,pi4,pi5`); other node names don't appear in its filtered panels.
+
+### Change a dashboard
+
+The files in `grafana/dashboards/` are what Grafana loads; it won't save UI edits to a provisioned dashboard. Grafana picks up a changed file within 30 seconds, with no restart.
+
+**v2.0 is generated.** Edit `tools/generate-network-health-dashboard.py`, then regenerate from the repository root (Python 3, standard library only):
+
+```bash
+python3 Infrastructure/tools/generate-network-health-dashboard.py
+```
+
+It overwrites `grafana/dashboards/network-health-v2.0.json`; commit both files. Don't edit the JSON by hand or replace it with a Grafana export, since the next regeneration would undo that. To try a change in the UI first, edit a copy (*Save as*), then carry the change over into the generator. The script is organised by dashboard row, with small helpers (`stat`, `timeseries`, `steps`, …) and the shared constants at the top: plan, colors, and the private-address pattern that decides router vs internet.
+
+**v1.0 is a plain export.** To change it:
 
 1. Edit in Grafana, then *Share → Export → Save to file* (leave "Export for sharing externally" **off**).
-2. Replace `grafana/dashboards/ping-all-sensors.json` with the export. Keep the datasource uid `smart-home-influxdb`.
-3. Grafana picks the file up within 30 seconds. No restart needed.
+2. Replace `grafana/dashboards/ping-all-sensors-v1.0.json` with the export. Keep the datasource uid `smart-home-influxdb` and the dashboard's `uid`.
 
-Panels query the measurements `ping`, `pingError`, `curl`, `curlError`, `speedtest` and `speedtest-error` by name. The `SensorID` dropdown lists `pi3,pi4,pi5`; add new `COMPUTER_NAME`s there.
+For a new version of either, save it as a new file with a new `uid`, title and version tag (for a generated one, a new generator script or output name), so the previous version stays available.
+
+To check a v2.0 change, open the dashboard after regenerating and confirm the changed panels show data and no errors; every panel's ⓘ describes what it should show. A change to a query is best checked against data with known problems, such as a test stack on other ports seeded with synthetic points (the approach used to test v2.0, see `docs/IMPROVEMENT_PLAN.md`).
+
+Panels query the measurements `ping`, `pingError`, `curl`, `curlError`, `speedtest` and `speedtest-error` by name.
 
 ## Build
 
@@ -173,7 +223,7 @@ After any change, from this `Infrastructure/` directory:
    # {"message":"datasource is working. N measurements found","status":"OK"}
    ```
 
-5. **The dashboard renders:** open `http://<host>:3000`, open *Ping dashboard - all sensors*, and check that the panels show data with no "datasource not found" errors.
+5. **The dashboards render:** open `http://<host>:3000`, open *Network health v2.0*, and check that the panels show data with no "datasource not found" errors. *Last report per node* should list every Pi with a recent time and a green report count.
 
 ## Security notes
 
@@ -193,4 +243,4 @@ After any change, from this `Infrastructure/` directory:
 
 **Grafana logs `Could not register plugin ... table is already registered`.** Harmless Grafana 12.0 startup noise.
 
-**Graphs are blank but the datasource health check is OK.** Check that a service is running and that its `COMPUTER_NAME` is listed in the dashboard's `SensorID` dropdown.
+**Graphs are blank but the datasource health check is OK.** Check *Last report per node* in v2.0: a node missing there has never written data, and a red count means it stopped. In v1.0, a node also has to be in its fixed `SensorID` list.

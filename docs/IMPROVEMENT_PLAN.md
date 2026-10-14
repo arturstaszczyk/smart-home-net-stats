@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Phases 2–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (uncommitted) · Phases 2–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -60,7 +60,7 @@ Not started. `Service/README.md` → Test describes the manual check (lint, one-
 
 Use the built-in `node:test` runner and `node:assert`, so there are zero new dependencies; that is the main payoff of the ESM move. Add `"test": "node --test"` to `Service/package.json`.
 
-- ⏳ `Service/Commands/__tests__/*.test.js`, one per command, exercising `parseOutput` against fixtures of **real** captured output (verified samples exist for ping, curl, and ifconfig; capture `speedtest-cli --simple` once during implementation). Cover, per parser: the happy path, the no-match path, and a comma-decimal variant. Every parser does `.replace(',', '.')`, so the Polish-locale case is deliberate behaviour worth pinning.
+- ⏳ `Service/Commands/__tests__/*.test.js`, one per command, exercising `parseOutput` against fixtures of **real** captured output (verified samples exist for ping, curl, and ifconfig; capture `speedtest-cli --simple` once during implementation). Include the fields added with dashboard v2.0: all six curl timings (with a plain-HTTP fixture where `appconnect` is 0) and the speed test's `ping`. Cover, per parser: the happy path, the no-match path, and a comma-decimal variant. Every parser does `.replace(',', '.')`, so the Polish-locale case is deliberate behaviour worth pinning.
 - ⏳ The no-match cases are where the bugs are. Write them as assertions on the *desired* behaviour and let them fail until Phase 3 fixes them. `DataUsedCommand.parseOutput` currently does `downloadBytes[1]` on a possibly-`null` match, and `CurlCommand`/`SpeedTestCommand` return `null` field values.
 - ⏳ `Service/Commands/__tests__/baseCommand.test.js`: drive `BaseCommand._execute` against real trivial shell commands (`echo hi`, `sh -c 'exit 3'`) to pin the success/error/close contract and the `{metricName, metrics, tags}` resolve/reject shape.
 - ⏳ `Service/Influx/__tests__/influxWriter.test.js`: inject a stub write API (see the Phase 3 constructor change) and assert tags become Influx tags and metrics become float fields.
@@ -116,6 +116,18 @@ Commit `1321bc7`. Verified end to end on 2026-10-14; see Verification below.
 - ⏳ **Clarify the migration in `Infrastructure/README.md`.** On 2026-10-14 the migration's `SET PASSWORD` step was run on a fresh install, and it set the service user's password to `haslo`. Grafana and the service then failed with `authorization failed` until the password was reset by hand. The section should say plainly that it applies only to a database created by the old scripts, and its commands should read the password from `.env` instead of having it typed in.
 - ⏳ **Not verified:** the arm/v7 image build (no QEMU on the build machine), and how the 8 legacy `graph` panels look in Grafana 12. Grafana should migrate them to time series automatically, but they were only checked through the API, not in a browser.
 - ⏳ Rotate the InfluxDB password if the old Docker Hub images (which contain `.env`) are public, and consider deleting those tags.
+
+## Dashboard v2.0 ✅ (not in the original plan)
+
+Done 2026-10-14 at the user's request, not yet committed. The original dashboard is kept as **v1.0**.
+
+- ✅ **Service: more measurements.** `CurlCommand.parseOutput` now stores all cumulative curl timings (`namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`; previously only the first and last), and `SpeedTestCommand.parseOutput` stores the speed test's `ping`. Existing field names are unchanged, so v1.0 is unaffected. Same parsing pattern as before, including comma decimals; the Phase 3 `null`-field fix applies to the new fields too.
+- ✅ **v1.0** (`ping-all-sensors-v1.0.json`, uid `1ojbtE-Mz`): renamed file, title `… v1.0`, tags `smart-home`/`v1.0`, header link to the other `smart-home` dashboards. Panels unchanged.
+- ✅ **Generator** in `Infrastructure/tools/generate-network-health-dashboard.py` (Python 3, stdlib only) produces the v2.0 JSON; the plan, node colors and LAN pattern are constants at its top, and every plan-dependent threshold, query and description is derived from them. Verified to reproduce the tested dashboard (only description wording changed), and that changing the plan leaves no stale 900/90 values.
+- ✅ **v2.0** (`network-health-v2.0.json`, uid `smart-home-network-v2`), 29 panels in five rows: *Now* (per-node tiles with units and meaningful thresholds, last report per node), *Latency* (internet vs router per node, jitter, loss, per-target small multiples), *Reliability* (node × target reachability grid, failures over time and per node), *Web response* (page load per URL, page-load phase breakdown, DNS), *Bandwidth* (download/upload vs the 1000/100 Mbit/s −10 % plan with the below-plan band shaded, speed-vs-plan table, speed test ping). Node and target filters are filled in from the data; router/LAN is detected by private address range instead of a hardcoded IP. Node colors for pi3/pi4/pi5 use a palette validated for colorblind readers on Grafana's dark and light backgrounds.
+- ✅ **Tested** on an isolated stack (ports 18086/13000) with 24 h of synthetic data planted with known problems: a healthy node with one just-below-plan speed test each way; a node with bad Wi-Fi (high router latency, jitter, loss bursts, speeds below plan, curl failures); a node with a 20-minute internet outage, a failed speed test and 2 hours of silence. Every panel query was run through Grafana's query API and checked against the planted values, and the dashboard was screenshotted and reviewed. The review found and fixed: a dead node not being flagged (now *Reports in last 10 min* = 0, red), the 20-minute outage invisible in the reachability grid (now 5-minute cells), an unreadable loss chart and grid legend, a truncated speed table and legends, and an unmatched column override. A real service batch built from the modified code then wrote the new curl timings and speed-test ping end to end.
+- ⏳ **Not verified:** the light theme (only dark was screenshotted). By design, outages shorter than one grid cell (5 minutes at 24 h) appear only under *Failures over time*.
+- ⏳ **To take effect on a Pi:** rebuild and restart its service (`docker compose up -d --build` in `Service/`). Until then, *Where page-load time goes* and *Speed test ping* stay empty for that node.
 
 ---
 

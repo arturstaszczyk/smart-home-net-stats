@@ -25,7 +25,18 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "smart-home"
+      ],
+      "asDropdown": false,
+      "title": "Dashboards",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -1757,7 +1768,10 @@
   "revision": 1,
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "smart-home",
+    "v1.0"
+  ],
   "templating": {
     "list": [
       {
@@ -1805,7 +1819,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Ping dashboard - all sensors",
+  "title": "Ping dashboard - all sensors v1.0",
   "uid": "1ojbtE-Mz",
   "version": 3,
   "weekStart": ""
