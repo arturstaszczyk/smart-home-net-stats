@@ -20,5 +20,6 @@ services:
       ROUTER_1: ${ROUTER_1:-}
       COMPUTER_NAME: ${COMPUTER_NAME:-}
       SPEED_TEST_MINUTE: ${SPEED_TEST_MINUTE:-6}
+      SPEED_TEST_SERVER_ID: ${SPEED_TEST_SERVER_ID:-}
     volumes:
       - ${DATA_DIR:-/var/lib/smart-home}/service:/var/log

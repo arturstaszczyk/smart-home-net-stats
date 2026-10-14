@@ -24,7 +24,7 @@ const frequentCommands = [
 ]
 
 const infrequentCommands = [
-    [SpeedTestCommand, { computerTag:process.env.COMPUTER_NAME }],
+    [SpeedTestCommand, { computerTag:process.env.COMPUTER_NAME, serverId: process.env.SPEED_TEST_SERVER_ID }],
 ]
 
 // Disabled until Phase 3 makes DataUsedCommand safe; see the commented call in runCommands

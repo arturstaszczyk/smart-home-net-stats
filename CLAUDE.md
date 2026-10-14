@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A self-hosted home-network monitoring stack, run on Raspberry Pis. A Node.js agent (`Service/`) periodically shells out to `ping`, `curl`, `speedtest-cli` and `ifconfig`, parses their stdout into metrics, and writes them as InfluxDB time series. `Infrastructure/` holds the config for InfluxDB 1.8 + Grafana (official images) that store and chart them. The two halves are **separate, independently deployed stacks** — each has its own `docker-compose.yml` and `.env`. `Infrastructure/` (influxdb + grafana) runs on one infrastructure host that runs **nothing else**; `Service/` runs on each measuring Pi and writes to Influx over the LAN. Never merge them into one compose file.
+A self-hosted home-network monitoring stack, run on Raspberry Pis. A Node.js agent (`Service/`) periodically shells out to `ping`, `curl`, Ookla's `speedtest` (official CLI, JSON output; not sivel's `speedtest-cli`) and `ifconfig`, parses their stdout into metrics, and writes them as InfluxDB time series. `Infrastructure/` holds the config for InfluxDB 1.8 + Grafana (official images) that store and chart them. The two halves are **separate, independently deployed stacks** — each has its own `docker-compose.yml` and `.env`. `Infrastructure/` (influxdb + grafana) runs on one infrastructure host that runs **nothing else**; `Service/` runs on each measuring Pi and writes to Influx over the LAN. Never merge them into one compose file.
 
 ## Commands
 
@@ -25,7 +25,7 @@ docker compose up -d --build          # Service/
 docker compose ps / logs -f
 ```
 
-There is no test framework yet — no test runner, test files, or test script (planned for Phase 2 of `docs/IMPROVEMENT_PLAN.md`). `Service/README.md` has the manual check: lint, a one-shot run, then query Influx.
+Unit tests: `yarn test` (built-in `node:test` runner, no extra dependencies) in `Service/`; one file with `node --test Commands/__tests__/<name>.test.js`. Tests live in `Service/Commands/__tests__/` and parse real captured CLI output from `fixtures/` (no network). Tests marked `{ todo: ... }` describe known bugs scheduled for Phase 3 and don't fail the run; remove the `todo` when fixing one. Run `yarn test` and `yarn lint` after any change in `Service/`.
 
 Each half has its own `.env` from its own `.env.template`. `Service/.env` serves both `docker compose` (passed in as explicit `environment:` entries) and local `yarn` runs (`dotenv`); it is not copied into the image (`.dockerignore`). `INFLUX_DB`/`INFLUX_USER`/`INFLUX_PASS` must match between `Infrastructure/.env` and every Pi's `Service/.env`.
 
@@ -33,9 +33,9 @@ Each half has its own `.env` from its own `.env.template`. `Service/.env` serves
 
 **Command pattern.** `Service/Commands/BaseCommand.js` exports a `command(CommandType, options)` factory plus a `BaseCommand._execute(cmd, name, {onSuccess, onError, onClose}, params)` helper that wraps `child_process.exec`. Each concrete command (`PingCommand`, `CurlCommand`, `SpeedTestCommand`, `DataUsedCommand`) subclasses it and:
 
-- returns a Promise from `execute(options)` that settles in the `onClose` callback — `resolve` on exit code 0, `reject` otherwise;
-- resolves/rejects with the same shape `{ metricName, metrics, tags }`, so a rejection is still a usable metric (the error path sets `metricName` to e.g. `pingError` and emits `{count: 1}` with an `error` tag);
-- has a `parseOutput(stdout)` that regex-scrapes CLI output. These parsers are locale-sensitive: they all normalise comma decimal separators to dots.
+- returns a Promise from `execute(options)` that settles in the `onClose` callback. `_execute` calls `onClose()` **without an exit code**, so the `if (error) reject(...)` branch never runs: commands always **resolve**, and failure is signalled by the error metric name (pinned in `baseCommand.test.js`);
+- resolves with the shape `{ metricName, metrics, tags }`, so a failure is still a usable metric (the error path sets `metricName` to e.g. `pingError` and emits `{count: 1}` with an `error` tag);
+- has a `parseOutput(stdout)` that regex-scrapes CLI output. These parsers are locale-sensitive and normalise comma decimal separators to dots, except `PingCommand`'s round-trip times (only its loss percentage is normalised; a `todo` test records it). `SpeedTestCommand` parses JSON, so locale doesn't apply.
 
 `index.js` holds the batch definitions as arrays of `[CommandClass, options]` pairs — `frequentCommands` (pings and curls to the router, Google, Wikipedia, wp.pl, 8.8.8.8) and `infrequentCommands` (speedtest). It picks a batch by scanning `process.argv` for the literal `frequent`/`infrequent`, runs the commands **sequentially** (so timing measurements don't contend), then writes every result to Influx.
 
@@ -52,6 +52,7 @@ Two Grafana dashboards are provisioned from `Infrastructure/grafana/dashboards/`
 - `DataUsedCommand` is wired up but disabled: the `measureDataUsed(...)` call in `index.js` is commented out. It depends on `WAN_INTERFACE`, which is not in `.env.template`.
 - The service is native ESM (`"type": "module"`, Node 22 per `.nvmrc` and the image; no Babel): relative imports need the `.js` extension, and `dotenv` is loaded with `import 'dotenv/config'`.
 - `index.js` picks the batch by scanning `process.argv` for `frequent`/`infrequent`; there is no arg-parsing library.
+- `SpeedTestCommand` parses Ookla's JSON: bandwidth comes in **bytes/s** and is stored as Mbit/s (`*8/1e6`) to keep `download`/`upload` comparable with old data and the dashboards. The Ookla binary is downloaded in `Dockerfile.service` with a pinned version and per-architecture SHA-256; bumping the version means updating all three checksums. Its licence is personal/non-commercial.
 - `CurlCommand` invokes `./timedcurl.sh` relative to `process.cwd()`, so the service must be started from `Service/` (or `/var/smart-home` in the container).
 - ESLint style here is 4-space indent, single quotes, **no semicolons**, unix line endings.
 - Some Pis run 32-bit Raspberry Pi OS (arm/v7). Every image must publish `linux/arm/v7` — that rules out `node:24` (no arm/v7). Check with `docker manifest inspect <image>` before bumping a tag.
