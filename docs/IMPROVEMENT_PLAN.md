@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds (uncommitted) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -141,6 +141,15 @@ Done 2026-10-14 at the user's request, committed as `1900b40` on `dashboard-v2`.
 - ⏳ **Not verified:** the light theme (only dark was screenshotted). By design, outages shorter than one grid cell (5 minutes at 24 h) appear only under *Failures over time*.
 - ⏳ **To take effect on a Pi:** rebuild and restart its service (`docker compose up -d --build` in `Service/`). Until then, *Where page-load time goes* and *Speed test ping* stay empty for that node.
 
+## Dashboard v2.1 ✅ (not in the original plan)
+
+Done 2026-10-19 at the user's request, uncommitted. Prompted by the first 24 h of real data: the plan thresholds (1000/100 −10 %) made the dashboard red for nodes that can never reach them. `pi105` is a deliberate worst-case canary in poor radio coverage; `pi113` is a Pi 3B on 2.4 GHz Wi-Fi, whose hardware ceiling is ~40–60 Mbit/s.
+
+- ✅ **Per-node expected speeds** in the generator: `PLAN` (1000/100, the default for `server-101` and every new node), `NODE_EXPECTED` (`pi113` 50/50, `pi105` 6/18 = its usual level) and `WARN_BELOW`/`CRIT_BELOW` (orange below 80 %, red below 50 % of the node's own expectation, as the user asked).
+- ✅ Speed tiles use per-node threshold overrides; "Speed tests below expected" and the table counts use one query with an OR of per-node conditions; new "% of expected" charts divide each node by its own expectation in the query, so all nodes share one scale and one set of bands. Raw Mbit/s charts stay. The table was cut to 12 short DL/UL columns so it fits at full width.
+- ✅ v2.1 is a new file and uid (`network-health-v2.1.json`, `smart-home-network-v2-1`); `network-health-v2.0.json` is kept as a frozen snapshot, and the generator now produces v2.1.
+- ✅ Verified on the live stack: every speed query run through Grafana's API and checked against the 24 h statistics (`server-101` 0 tests below expected, where v2.0 showed 14 "below plan"; `pi113` 18 downloads below 40; `pi105` 1 download and 8 uploads below its baseline), and the dashboard and table were screenshotted and reviewed.
+
 ## Ookla speed test ✅ (not in the original plan)
 
 Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtest`. Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
@@ -167,6 +176,7 @@ Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0,
 | Log rotation copied to the non-existent `/var/cron/log2.bak`. | Phase 5 review | Phase 3 #6 (`1321bc7`) |
 | sivel's `speedtest-cli` under-reports a gigabit line by ~20 % (675–707 Mbit/s vs 883 from Ookla on the same machine and connection). | Comparing tools | Switched to Ookla's CLI (`ookla-speedtest`, not yet tested end to end) |
 | Speed test `null` fields when output didn't match. | Phase 2 tests | Ookla JSON parser omits missing values (Phase 3 #5, speed-test half) |
+| Grafana stopped loading dashboard file changes from 2026-10-14 21:50 UTC: `git switch main` (then still the old layout) deleted `Infrastructure/grafana/dashboards/` and the fast-forward recreated it, so the running container kept the deleted directory (`failed to search for dashboards`, 14 000+ log lines). Existing dashboards kept working, which hid it. | Deploying v2.1 | `docker compose restart grafana` (2026-10-19); documented in `Infrastructure/README.md` → Troubleshooting and `CLAUDE.md` |
 | Dashboard v2.0 before release: a dead node wasn't flagged, a 20-minute outage was invisible in the reachability grid, the loss chart and grid legend were unreadable, the speed table and legends were cut off, and the "below plan" columns weren't colored. | Synthetic-data test and screenshot review | Fixed before commit (`1900b40`) |
 
 **Open**

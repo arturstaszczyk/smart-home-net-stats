@@ -1,31 +1,35 @@
-"""Generates the "Network health v2.0" Grafana dashboard.
+"""Generates the "Network health v2.1" Grafana dashboard.
 
-Writes ../grafana/dashboards/network-health-v2.0.json (relative to this script), which Grafana
+Writes ../grafana/dashboards/network-health-v2.1.json (relative to this script), which Grafana
 provisions automatically within 30 seconds. Python 3 standard library only:
 
     python3 Infrastructure/tools/generate-network-health-dashboard.py [output.json]
 
 The generated JSON is committed; edit this script and regenerate rather than editing the JSON
-by hand. See Infrastructure/README.md, "Dashboards".
+by hand. See Infrastructure/README.md, "Dashboards". network-health-v2.0.json is the frozen
+output of the previous version of this script.
 """
+import re
 import json
 import sys
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / 'grafana' / 'dashboards' / 'network-health-v2.0.json'
+OUTPUT = Path(__file__).resolve().parent.parent / 'grafana' / 'dashboards' / 'network-health-v2.1.json'
 
 DS = {'type': 'influxdb', 'uid': 'smart-home-influxdb'}
 LAN = r'/^(10|127|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\./'
 NODE = '"computerTag" =~ /^$node$/'
 TARGET = '"address" =~ /^$target$/'
 
-# Internet plan. A result counts as "below plan" under plan - tolerance (orange),
-# and "far below" under half the plan (red).
-PLAN_DOWNLOAD, PLAN_UPLOAD = 1000, 100          # Mbit/s
-TOLERANCE = 0.10
-DOWN_PLAN, UP_PLAN = round(PLAN_DOWNLOAD * (1 - TOLERANCE)), round(PLAN_UPLOAD * (1 - TOLERANCE))
-DOWN_FAR, UP_FAR = PLAN_DOWNLOAD // 2, PLAN_UPLOAD // 2
-PLAN_TEXT = f'{PLAN_DOWNLOAD}/{PLAN_UPLOAD} −{TOLERANCE:.0%}'
+# Expected speed (Mbit/s) per node. Nodes not listed here, and every new node, expect PLAN.
+# Speed results are judged against the node's own expectation:
+# orange below WARN_BELOW of it, red below CRIT_BELOW.
+PLAN = {'download': 1000, 'upload': 100}
+NODE_EXPECTED = {
+    'pi113': {'download': 50, 'upload': 50},    # Pi 3B Wi-Fi ceiling (2.4 GHz, 1x1, 20 MHz): ~40-60 real
+    'pi105': {'download': 6, 'upload': 18},     # canary in poor radio coverage: its normal level
+}
+WARN_BELOW, CRIT_BELOW = 0.80, 0.50
 
 # Validated categorical slots (dataviz reference palette, dark steps; all-pairs safe for 3).
 NODE_COLORS = {'pi3': '#3987e5', 'pi4': '#d95926', 'pi5': '#199e70'}
@@ -69,7 +73,7 @@ def row(title, y):
 
 
 def stat(title, desc, targets, pos, unit, thresholds, time_from=None, calc='lastNotNull',
-         decimals=None, no_value=None, color_mode='background'):
+         decimals=None, no_value=None, color_mode='background', overrides=None):
     p = {'type': 'stat', 'id': nid(), 'title': title, 'description': desc, 'datasource': DS,
          'gridPos': pos, 'targets': targets,
          'options': {'reduceOptions': {'calcs': [calc], 'fields': '', 'values': False},
@@ -77,7 +81,7 @@ def stat(title, desc, targets, pos, unit, thresholds, time_from=None, calc='last
                      'textMode': 'value_and_name', 'orientation': 'auto', 'wideLayout': True,
                      'showPercentChange': False},
          'fieldConfig': {'defaults': {'unit': unit, 'thresholds': thresholds,
-                                      'color': {'mode': 'thresholds'}}, 'overrides': []}}
+                                      'color': {'mode': 'thresholds'}}, 'overrides': overrides or []}}
     if decimals is not None:
         p['fieldConfig']['defaults']['decimals'] = decimals
     if no_value is not None:
@@ -121,6 +125,45 @@ def lan(field, agg='mean'):
     return (f'SELECT {agg}("{field}") FROM "ping" WHERE {NODE} AND "address" =~ {LAN} AND $timeFilter')
 
 
+def expected(node, field):
+    return NODE_EXPECTED.get(node, PLAN)[field]
+
+
+def fmt(value):
+    return f'{value:g}'
+
+
+LISTED = '|'.join(re.escape(n) for n in NODE_EXPECTED)
+
+
+def speed_parts(field):
+    """(WHERE clause, expected value) per listed node, plus one for every other node (PLAN)."""
+    parts = [(f'"computerTag" = \'{n}\'', expected(n, field)) for n in NODE_EXPECTED]
+    parts.append((f'"computerTag" !~ /^({LISTED})$/' if NODE_EXPECTED else 'true', PLAN[field]))
+    return parts
+
+
+def below_expected(field, factor=WARN_BELOW):
+    """WHERE fragment matching results under factor x each node's own expectation."""
+    return '(' + ' OR '.join(f'({where} AND "{field}" < {fmt(exp * factor)})'
+                             for where, exp in speed_parts(field)) + ')'
+
+
+def speed_steps(exp):
+    return steps('red', (round(exp * CRIT_BELOW, 6), 'orange'), (round(exp * WARN_BELOW, 6), 'green'))
+
+
+def per_node_speed_overrides(field):
+    return [{'matcher': {'id': 'byName', 'options': n},
+             'properties': [{'id': 'thresholds', 'value': speed_steps(expected(n, field))}]}
+            for n in NODE_EXPECTED]
+
+
+EXPECTED_TEXT = ('Each node is judged against its own expected speed: ' +
+                 ', '.join(f'{n} {fmt(e["download"])}/{fmt(e["upload"])}' for n, e in NODE_EXPECTED.items()) +
+                 f', every other node {fmt(PLAN["download"])}/{fmt(PLAN["upload"])} Mbit/s (download/upload). '
+                 f'Orange below {WARN_BELOW:.0%} of it, red below {CRIT_BELOW:.0%}.')
+
 panels = []
 y = 0
 
@@ -150,25 +193,23 @@ panels += [
 ]
 y += 5
 panels += [
-    stat('Last download', f'Most recent speed test per node (tests run hourly). Plan: {PLAN_DOWNLOAD} Mbit/s '
-         f'±{TOLERANCE:.0%}, so anything below {DOWN_PLAN} is flagged: orange below plan, red below {DOWN_FAR}.',
+    stat('Last download', 'Most recent speed test per node (tests run hourly). ' + EXPECTED_TEXT,
          [q(f'SELECT last("download") FROM "speedtest" WHERE {NODE} AND $timeFilter GROUP BY "computerTag"',
             '$tag_computerTag')],
-         {'x': 0, 'y': y, 'w': 6, 'h': 5}, 'Mbits', steps('red', (DOWN_FAR, 'orange'), (DOWN_PLAN, 'green')), '3h',
-         decimals=0),
-    stat('Last upload', f'Most recent speed test per node. Plan: {PLAN_UPLOAD} Mbit/s ±{TOLERANCE:.0%}, so '
-         f'anything below {UP_PLAN} is flagged: orange below plan, red below {UP_FAR}.',
+         {'x': 0, 'y': y, 'w': 6, 'h': 5}, 'Mbits', speed_steps(PLAN['download']), '3h', decimals=0,
+         overrides=per_node_speed_overrides('download')),
+    stat('Last upload', 'Most recent speed test per node. ' + EXPECTED_TEXT,
          [q(f'SELECT last("upload") FROM "speedtest" WHERE {NODE} AND $timeFilter GROUP BY "computerTag"',
             '$tag_computerTag')],
-         {'x': 6, 'y': y, 'w': 6, 'h': 5}, 'Mbits', steps('red', (UP_FAR, 'orange'), (UP_PLAN, 'green')), '3h',
-         decimals=0),
-    stat('Speed tests below plan', f'How many speed tests in the selected time range measured download below '
-         f'{DOWN_PLAN} Mbit/s or upload below {UP_PLAN} Mbit/s, all selected nodes. Details per node in the '
-         'Bandwidth section.',
-         [q(f'SELECT count("download") FROM "speedtest" WHERE "download" < {DOWN_PLAN} AND {NODE} AND $timeFilter',
-            f'download < {DOWN_PLAN}', 'A'),
-          q(f'SELECT count("upload") FROM "speedtest" WHERE "upload" < {UP_PLAN} AND {NODE} AND $timeFilter',
-            f'upload < {UP_PLAN}', 'B')],
+         {'x': 6, 'y': y, 'w': 6, 'h': 5}, 'Mbits', speed_steps(PLAN['upload']), '3h', decimals=0,
+         overrides=per_node_speed_overrides('upload')),
+    stat('Speed tests below expected', f'How many speed tests in the selected time range measured download or '
+         f'upload below {WARN_BELOW:.0%} of their node\'s expected speed, all selected nodes. ' + EXPECTED_TEXT +
+         ' Details per node in the Bandwidth section.',
+         [q(f'SELECT count("download") FROM "speedtest" WHERE {below_expected("download")} AND {NODE} AND $timeFilter',
+            'download', 'A'),
+          q(f'SELECT count("upload") FROM "speedtest" WHERE {below_expected("upload")} AND {NODE} AND $timeFilter',
+            'upload', 'B')],
          {'x': 12, 'y': y, 'w': 6, 'h': 5}, 'none', steps('green', (1, 'orange'), (3, 'red')), no_value='0'),
     stat('Failures (last hour)', 'Commands that failed outright in the last hour, all selected nodes: '
          'ping with no reply at all, curl errors or timeouts (10 s), and failed speed tests.',
@@ -355,57 +396,94 @@ y += 8
 
 # ---------------------------------------------------------------- Bandwidth
 panels.append(row('Bandwidth (speed test)', y)); y += 1
-below = lambda plan: steps('red', (plan, 'transparent'))
-panels += [
-    timeseries('Download per node', f'Speed test results (hourly). The shaded band below {DOWN_PLAN} Mbit/s '
-               f'marks results under the plan ({PLAN_DOWNLOAD} Mbit/s −{TOLERANCE:.0%}).',
-               [q(f'SELECT mean("download") FROM "speedtest" WHERE {NODE} AND $timeFilter '
-                  'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag')],
-               {'x': 0, 'y': y, 'w': 12, 'h': 9}, 'Mbits', overrides=node_ov, thresholds=below(DOWN_PLAN),
-               th_style='line+area', points='always', min_=0,
-               soft_max=round(PLAN_DOWNLOAD * (1 + TOLERANCE)), span_nulls=True,
-               legend_calcs=('lastNotNull', 'mean', 'min')),
-    timeseries('Upload per node', f'Speed test results (hourly). The shaded band below {UP_PLAN} Mbit/s marks '
-               f'results under the plan ({PLAN_UPLOAD} Mbit/s −{TOLERANCE:.0%}).',
-               [q(f'SELECT mean("upload") FROM "speedtest" WHERE {NODE} AND $timeFilter '
-                  'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag')],
-               {'x': 12, 'y': y, 'w': 12, 'h': 9}, 'Mbits', overrides=node_ov, thresholds=below(UP_PLAN),
-               th_style='line+area', points='always', min_=0,
-               soft_max=round(PLAN_UPLOAD * (1 + TOLERANCE)), span_nulls=True,
-               legend_calcs=('lastNotNull', 'mean', 'min')),
-]
+# Grafana can't color one chart per node, so the % charts divide each node by its own expectation
+# in the query (one query per listed node, one for all others) and share the same bands.
+pct_bands = steps('red', (CRIT_BELOW * 100, 'orange'), (WARN_BELOW * 100, 'transparent'))
+
+
+def pct_chart(field, title, x):
+    return timeseries(
+        f'{title}, % of expected per node',
+        f'Speed test results (hourly) as a share of each node\'s expected {field} speed, so all nodes compare on '
+        f'one scale. Orange band: below {WARN_BELOW:.0%}. Red band: below {CRIT_BELOW:.0%}. ' + EXPECTED_TEXT,
+        [q(f'SELECT mean("{field}") / {fmt(exp)} * 100 FROM "speedtest" WHERE {where} AND {NODE} AND $timeFilter '
+           'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag', chr(65 + i))
+         for i, (where, exp) in enumerate(speed_parts(field))],
+        {'x': x, 'y': y, 'w': 12, 'h': 9}, 'percent', overrides=node_ov, thresholds=pct_bands,
+        th_style='line+area', points='always', min_=0, soft_max=110, span_nulls=True,
+        legend_calcs=('lastNotNull', 'mean', 'min'))
+
+
+def raw_chart(field, title, x):
+    return timeseries(
+        f'{title} per node', f'Speed test results (hourly) in Mbit/s. ' + EXPECTED_TEXT,
+        [q(f'SELECT mean("{field}") FROM "speedtest" WHERE {NODE} AND $timeFilter '
+           'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag')],
+        {'x': x, 'y': y, 'w': 12, 'h': 8}, 'Mbits', overrides=node_ov, points='always', min_=0, span_nulls=True,
+        legend_calcs=('lastNotNull', 'mean', 'min'))
+
+
+panels += [pct_chart('download', 'Download', 0), pct_chart('upload', 'Upload', 12)]
 y += 9
-speed_cols = {f'Download {c}': (DOWN_FAR, DOWN_PLAN) for c in ('last', 'avg', 'min')}
-speed_cols.update({f'Upload {c}': (UP_FAR, UP_PLAN) for c in ('last', 'avg', 'min')})
+panels += [raw_chart('download', 'Download', 0), raw_chart('upload', 'Upload', 12)]
+y += 8
+
+# Table: one stats query per listed node plus one for the others (each divides by its own
+# expectation), and the below-expected counts; merged into one row per node.
+# Short column names (DL/UL) keep all 12 columns visible at full width.
+pct_cols = [f'{f} {c} %' for f in ('DL', 'UL') for c in ('avg', 'min')]
 speed_ov = [{'matcher': {'id': 'byName', 'options': col},
-             'properties': [{'id': 'unit', 'value': 'Mbits'}, {'id': 'decimals', 'value': 0},
-                            {'id': 'thresholds', 'value': steps('red', (far, 'orange'), (plan, 'green'))},
-                            {'id': 'custom.cellOptions', 'value': {'type': 'color-text'}}]}
-            for col, (far, plan) in speed_cols.items()]
+             'properties': [{'id': 'unit', 'value': 'percent'}, {'id': 'decimals', 'value': 0},
+                            {'id': 'thresholds', 'value': speed_steps(100)},
+                            {'id': 'custom.cellOptions', 'value': {'type': 'color-text'}}]} for col in pct_cols]
+speed_ov += [{'matcher': {'id': 'byRegexp', 'options': '(DL|UL) (expected|last)'},
+              'properties': [{'id': 'unit', 'value': 'Mbits'}, {'id': 'decimals', 'value': 0}]}]
 # Grafana anchors byRegexp to the whole column name.
-speed_ov += [{'matcher': {'id': 'byRegexp', 'options': '.* below plan'},
+speed_ov += [{'matcher': {'id': 'byRegexp', 'options': '(DL|UL) below'},
               'properties': [{'id': 'noValue', 'value': '0'},
                              {'id': 'thresholds', 'value': steps('green', (1, 'orange'), (3, 'red'))},
                              {'id': 'custom.cellOptions', 'value': {'type': 'color-background', 'mode': 'basic'}}]}]
+
+
+def table_stats(i, where, exp_down, exp_up):
+    def pct(agg, field, exp):
+        return f'{agg}("{field}") / {fmt(exp)} * 100'
+    return q(f'SELECT count("download") AS "Tests", '
+             f'{fmt(exp_down)} + 0 * last("download") AS "DL expected", '
+             f'last("download") AS "DL last", '
+             f'{pct("mean", "download", exp_down)} AS "DL avg %", '
+             f'{pct("min", "download", exp_down)} AS "DL min %", '
+             f'{fmt(exp_up)} + 0 * last("upload") AS "UL expected", '
+             f'last("upload") AS "UL last", '
+             f'{pct("mean", "upload", exp_up)} AS "UL avg %", '
+             f'{pct("min", "upload", exp_up)} AS "UL min %" '
+             f'FROM "speedtest" WHERE {where} AND {NODE} AND $timeFilter GROUP BY "computerTag"',
+             '', chr(65 + i), 'table')
+
+
+down_parts, up_parts = speed_parts('download'), speed_parts('upload')
+table_targets = [table_stats(i, where, exp_down, up_parts[i][1])
+                 for i, (where, exp_down) in enumerate(down_parts)]
+n = len(table_targets)
+table_targets += [
+    q(f'SELECT count("download") AS "DL below" FROM "speedtest" WHERE {below_expected("download")} '
+      f'AND {NODE} AND $timeFilter GROUP BY "computerTag"', '', chr(65 + n), 'table'),
+    q(f'SELECT count("upload") AS "UL below" FROM "speedtest" WHERE {below_expected("upload")} '
+      f'AND {NODE} AND $timeFilter GROUP BY "computerTag"', '', chr(66 + n), 'table'),
+]
 panels += [
     {
-        'type': 'table', 'id': nid(), 'title': 'Speed vs plan per node', 'datasource': DS,
-        'description': f'Speed test summary for the selected time range. Plan: {DOWN_PLAN}+ / {UP_PLAN}+ Mbit/s '
-                       f'({PLAN_TEXT}). Green meets plan, orange below plan, red far below.',
+        'type': 'table', 'id': nid(), 'title': 'Speed vs expected per node', 'datasource': DS,
+        'description': 'Speed test summary for the selected time range. DL = download, UL = upload. '
+                       '"expected" and "last" are Mbit/s; "avg %" and "min %" are a share of the node\'s expected '
+                       'speed; "below" counts tests under ' + f'{WARN_BELOW:.0%}' + ' of it. ' + EXPECTED_TEXT,
         'gridPos': {'x': 0, 'y': y, 'w': 24, 'h': 6},
-        'targets': [q('SELECT last("download") AS "Download last", mean("download") AS "Download avg", '
-                      'min("download") AS "Download min", last("upload") AS "Upload last", '
-                      'mean("upload") AS "Upload avg", min("upload") AS "Upload min", count("download") AS "Tests" '
-                      f'FROM "speedtest" WHERE {NODE} AND $timeFilter GROUP BY "computerTag"', '', 'A', 'table'),
-                    q(f'SELECT count("download") AS "Download below plan" FROM "speedtest" WHERE "download" < {DOWN_PLAN} '
-                      f'AND {NODE} AND $timeFilter GROUP BY "computerTag"', '', 'B', 'table'),
-                    q(f'SELECT count("upload") AS "Upload below plan" FROM "speedtest" WHERE "upload" < {UP_PLAN} '
-                      f'AND {NODE} AND $timeFilter GROUP BY "computerTag"', '', 'C', 'table')],
+        'targets': table_targets,
         'transformations': [{'id': 'merge', 'options': {}},
                             {'id': 'organize', 'options': {'excludeByName': {'Time': True},
                                                            'renameByName': {'computerTag': 'Node'},
-                                                           'indexByName': {'computerTag': 0, 'Tests': 1}}}],
-        'fieldConfig': {'defaults': {'custom': {'align': 'left'}}, 'overrides': speed_ov},
+                                                           'indexByName': {'computerTag': 0, 'Tests': 1, 'DL expected': 2, 'DL last': 3, 'DL avg %': 4, 'DL min %': 5, 'DL below': 6, 'UL expected': 7, 'UL last': 8, 'UL avg %': 9, 'UL min %': 10, 'UL below': 11}}}],
+        'fieldConfig': {'defaults': {'custom': {'align': 'left', 'minWidth': 70}}, 'overrides': speed_ov},
         'options': {'showHeader': True},
     },
     timeseries('Speed test ping per node', 'Latency measured by the speed test itself, to its test server. '
@@ -423,9 +501,9 @@ var = lambda name, label, query: {
     'current': {'selected': True, 'text': ['All'], 'value': ['$__all']}, 'options': [], 'hide': 0}
 
 dashboard = {
-    'uid': 'smart-home-network-v2', 'id': None, 'title': 'Network health v2.0',
-    'description': 'Per-node network health: latency, reachability, web response and bandwidth vs plan.',
-    'tags': ['smart-home', 'v2.0'], 'editable': True, 'graphTooltip': 1, 'schemaVersion': 39,
+    'uid': 'smart-home-network-v2-1', 'id': None, 'title': 'Network health v2.1',
+    'description': 'Per-node network health: latency, reachability, web response and bandwidth vs each node\'s expected speed.',
+    'tags': ['smart-home', 'v2.1'], 'editable': True, 'graphTooltip': 1, 'schemaVersion': 39,
     'time': {'from': 'now-24h', 'to': 'now'}, 'refresh': '1m', 'timezone': '', 'version': 1,
     'links': [{'type': 'dashboards', 'tags': ['smart-home'], 'asDropdown': False, 'title': 'Dashboards',
                'includeVars': False, 'keepTime': True}],
