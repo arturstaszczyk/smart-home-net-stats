@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds (uncommitted) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Grafana 12.0.2 → 13.2.4 upgrade ⏳ planned · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -162,6 +162,82 @@ Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtes
 - ⏳ **Not verified:** the arm64 and armhf builds on the Pis, and the hourly cron run (the verified runs were manual).
 - ⚠️ **Finding:** the first two real Ookla runs auto-selected server 1958 and measured only 248 and 332 Mbit/s down (upload ~101), where a run earlier the same evening against server 38577 (AWIST, Kraków) measured 883. Unpinned results vary with the server Ookla picks, so the dashboard would flag them as far below plan. Recommendation: set `SPEED_TEST_SERVER_ID` to a server that reaches ~900 (e.g. 38577) on every Pi and compare a few runs. Not yet decided by the user.
 - ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
+
+## Grafana upgrade 12.0.2 → 13.2.4 ⏳ (planned)
+
+Planned 2026-10-19 at the user's request; a short downtime is accepted. Run it on the infrastructure host, from `Infrastructure/`.
+
+**Why.** 12.0.2 is from June 2025. The new major version adds cross-filtering on status history and state timeline (13.2), so a click on a node in the reachability grid could filter the whole dashboard, and a revamped gauge (12.4/13.0). 13.2.4 publishes amd64, arm64 and arm/v7 images (checked on Docker Hub, 2026-10-19). A 13.3 image did not exist yet; 13.3 adds the data-driven Text panel (preview), which this plan doesn't need.
+
+**Approach: a fresh Grafana, not an in-place upgrade.** Everything that matters in this Grafana is provisioned from the repository, so a new, empty data folder rebuilds it on the first start. That skips the 12.4.13 intermediate step and the 13.0 storage migration (and its SQLite locking risk). Inventory of the current Grafana, checked 2026-10-19:
+
+| Item | After a fresh start |
+| --- | --- |
+| Datasource `smart-home-influxdb` | Recreated (provisioned) |
+| Network health v2.1, v2.0, Ping dashboard v1.0 | Recreated (provisioned) |
+| "Network health" (uid `smart-home-network`), saved by hand | **Not recreated.** It is an identical copy of v2.0, so nothing is lost. |
+| Alert rules, annotations, library panels, folders, extra plugins | None exist |
+| User `admin`, contact point "email receiver" | Grafana defaults, recreated |
+
+**Known 13.0 changes that could matter:** data sources referenced by numeric ID are disabled (not used here: everything uses uid `smart-home-influxdb`) and the Image Renderer plugin is removed (not used). **Unknown, check in step 4:** whether anonymous Admin access (`GF_AUTH_ANONYMOUS_ORG_ROLE=Admin`) still works; 12 already logs it as deprecated. Dashboard v1.0's 8 legacy `graph` panels are the most likely to render differently; v2.0 and v2.1 don't use that panel type.
+
+**Downtime.** Grafana only, about a minute. InfluxDB and the services on the Pis keep running and writing, so no measurements are lost.
+
+### Steps
+
+1. **Set the new image.** In `Infrastructure/docker-compose.yml`, change `grafana/grafana:12.0.2` to `grafana/grafana:13.2.4`, and download it before stopping anything:
+
+   ```bash
+   docker compose pull grafana
+   ```
+
+2. **Put the old data folder aside** (it is the rollback) and create an empty one:
+
+   ```bash
+   docker compose stop grafana
+   sudo mv /var/lib/smart-home/grafana /var/lib/smart-home/grafana.old-12.0.2
+   sudo mkdir /var/lib/smart-home/grafana && sudo chown 472:472 /var/lib/smart-home/grafana
+   ```
+
+3. **Start Grafana 13.2.4:**
+
+   ```bash
+   docker compose up -d grafana
+   docker compose logs -f grafana        # wait for "HTTP Server Listen"; Ctrl+C
+   ```
+
+4. **Run the checks** below. If any fails, roll back.
+
+5. **Update the repository:** the version in `Infrastructure/README.md` (first list) and in this plan's Phase 5 notes, then commit and push together with the compose change. Do **not** `git switch` to an old commit on the infrastructure host while Grafana runs (it detaches the dashboards mount; see *Bugs found during testing*). If it happens, `docker compose restart grafana`.
+
+6. **After a few days without problems:** delete `/var/lib/smart-home/grafana.old-12.0.2`. Optionally build dashboard v2.2 with cross-filtering on the reachability grid (a generator change: new file, uid and tag; v2.1 stays).
+
+### Checks
+
+| Check | Command or action | Expected |
+| --- | --- | --- |
+| Version | `curl -s http://localhost:3000/api/health` | `13.2.4`, `"database": "ok"` |
+| Datasource | `curl -s http://localhost:3000/api/datasources/uid/smart-home-influxdb/health` | `"status":"OK"` |
+| Dashboards | `curl -s 'http://localhost:3000/api/search?type=dash-db'` | Network health v2.1, Network health v2.0, Ping dashboard - all sensors v1.0 |
+| Provisioning | The log command below the table | No output |
+| Anonymous access | `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' localhost:3000/api/folders -d '{"title":"upgrade-check"}'` | `200`: anonymous Admin still works; delete the "upgrade-check" folder in the UI. `401` or `403`: it doesn't; decide on a login (`GF_AUTH_DISABLE_LOGIN_FORM=false` and an admin password) or accept read-only dashboards. |
+| Rendering | Open v2.1 and v1.0 in a browser at the 24 h view | Panels show data; no "panel plugin not found" or Angular errors |
+
+Provisioning log check:
+
+```bash
+docker compose logs grafana 2>&1 | grep -iE 'provision.*(error|failed)'
+```
+
+### Rollback
+
+```bash
+docker compose stop grafana
+sudo mv /var/lib/smart-home/grafana /var/lib/smart-home/grafana.failed-13.2.4
+sudo mv /var/lib/smart-home/grafana.old-12.0.2 /var/lib/smart-home/grafana
+# set the image tag back to grafana/grafana:12.0.2 in docker-compose.yml
+docker compose up -d grafana
+```
 
 ## Bugs found during testing
 
