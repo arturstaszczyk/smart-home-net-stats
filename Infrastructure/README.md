@@ -3,7 +3,7 @@
 This part of the project keeps the measurement data and shows it in charts:
 
 * **InfluxDB 1.8** (`influxdb:1.8.10`, the official image) keeps the time series that the service writes.
-* **Grafana** (`grafana/grafana:12.0.2`) shows the data in charts. Grafana gets its datasource and its dashboards from files in this directory. Thus, you do not import them manually.
+* **Grafana** (`grafana/grafana:13.2.4`) shows the data in charts. Grafana gets its datasource and its dashboards from files in this directory. Thus, you do not import them manually.
 
 The two containers start from `docker-compose.yml` in this directory. They run on one **infrastructure host**, and no other part of the project runs on this host. The service that does the measurements is a different part in `../Service/`, and it runs on the Pis. Refer to `../Service/README.md`.
 
@@ -258,7 +258,7 @@ After each change, do these tests in this `Infrastructure/` directory:
 ## Security
 
 * **The Pis must connect to InfluxDB on port 8086 through your LAN.** InfluxDB checks the user name and password. A person on the LAN without them cannot read or write data.
-* **Grafana does not ask for a login.** All visitors are administrators. This was also true before. Grafana 12 writes the warning `auth.anonymous.org_role is deprecated` for this configuration. A future Grafana version will let anonymous visitors only read dashboards.
+* **Grafana does not ask for a login.** All visitors are administrators. This was also true before. Grafana 12 and 13 write the warning `auth.anonymous.org_role is deprecated` for this configuration. In Grafana 13.2.4, anonymous visitors are still administrators. A future Grafana version will let anonymous visitors only read dashboards.
 
   WARNING: Do not make port 3000 available outside your LAN. All visitors are administrators and can change Grafana.
 

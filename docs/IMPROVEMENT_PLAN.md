@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Grafana 12.0.2 → 13.2.4 upgrade ⏳ planned · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -118,7 +118,7 @@ Commit `1321bc7`. Verified end to end on 2026-10-14; see Verification below.
 
   Data uses **bind mounts under `DATA_DIR`** (default `/var/lib/smart-home`), not named volumes, so existing data is used in place. All four `*-build.sh` / `*-run.sh` scripts are deleted.
 - ❌🔀 **Publish Influx on `127.0.0.1:8086`: not done**, because it would cut off the Pis, which write over the LAN. Replaced by **enabling InfluxDB authentication** with 8086 still on the LAN, so the credentials are actually checked. Existing installs need a one-time migration (auth off → create an admin → reset the service password → auth on), documented in `Infrastructure/README.md`. It is required because Influx with auth on, a non-admin user and no admin rejects every request, including creating an admin.
-- 🔀 **Grafana provisioning.** `grafana/grafana:12.0.2` (pinned) with `Infrastructure/grafana/provisioning/datasources/influxdb.yml` (uid `smart-home-influxdb`, credentials from `.env`) and a dashboards provider (`allowUiUpdates: false`, so the JSON file is the source of truth). The dashboard moved to `Infrastructure/grafana/dashboards/ping-all-sensors.json`. Correction to the plan: only **two** of the three uids were datasources (`Gv-wFIiRz`, `SmartHome`); both now point to `smart-home-influxdb`. `1ojbtE-Mz` is the dashboard's own uid and was kept, so provisioning takes over the copy already imported by hand. Anonymous Admin access and the disabled login form were kept as before; Grafana 12 logs that anonymous Admin is deprecated.
+- 🔀 **Grafana provisioning.** `grafana/grafana:12.0.2` (pinned; upgraded to 13.2.4 on 2026-10-19, see below) with `Infrastructure/grafana/provisioning/datasources/influxdb.yml` (uid `smart-home-influxdb`, credentials from `.env`) and a dashboards provider (`allowUiUpdates: false`, so the JSON file is the source of truth). The dashboard moved to `Infrastructure/grafana/dashboards/ping-all-sensors.json`. Correction to the plan: only **two** of the three uids were datasources (`Gv-wFIiRz`, `SmartHome`); both now point to `smart-home-influxdb`. `1ojbtE-Mz` is the dashboard's own uid and was kept, so provisioning takes over the copy already imported by hand. Anonymous Admin access and the disabled login form were kept as before; Grafana 12 logs that anonymous Admin is deprecated.
 - ❌ **CI** (`.github/workflows/ci.yml`): dropped by the user.
 - ✅ **Docs.** Detailed `Infrastructure/README.md` (configure, fresh install, migration, operate, manage users, change the dashboard, test, security notes, troubleshooting). `Service/README.md` updated for its own compose stack, including multi-arch `buildx` push to Docker Hub. New root `README.md` with a quick start per part. `CLAUDE.md` refreshed.
 - ✅ *Not in the plan, found while doing it:* `Service/.dockerignore` didn't exclude `.env`, so **old images had `Service/.env` (including the Influx password) baked in**. Now excluded, and `.env` is git-ignored at the root too.
@@ -163,9 +163,16 @@ Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtes
 - ⚠️ **Finding:** the first two real Ookla runs auto-selected server 1958 and measured only 248 and 332 Mbit/s down (upload ~101), where a run earlier the same evening against server 38577 (AWIST, Kraków) measured 883. Unpinned results vary with the server Ookla picks, so the dashboard would flag them as far below plan. Recommendation: set `SPEED_TEST_SERVER_ID` to a server that reaches ~900 (e.g. 38577) on every Pi and compare a few runs. Not yet decided by the user.
 - ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
 
-## Grafana upgrade 12.0.2 → 13.2.4 ⏳ (planned)
+## Grafana upgrade 12.0.2 → 13.2.4 ✅
 
-Planned 2026-10-19 at the user's request; a short downtime is accepted. Run it on the infrastructure host, from `Infrastructure/`.
+Done 2026-10-19 as a fresh install, following the steps below. Results:
+
+- ✅ Grafana 13.2.4 started on an empty data folder; the old one is kept as `/var/lib/smart-home/grafana.old-12.0.2` (step 6: delete after a few days without problems). Downtime was about a minute.
+- ✅ All checks passed: version 13.2.4 and database `ok`; datasource `OK` (6 measurements); exactly the three provisioned dashboards; no provisioning errors; **anonymous Admin access still works** (HTTP 200 on folder creation; the "upgrade-check" folder was deleted again), still logged as deprecated; v2.1 and v1.0 render with no plugin or Angular errors.
+- ⚠️ Three `level=error` lines at the first start, none repeated afterwards: two `database is locked (SQLITE_BUSY)` from the secrets store in the same second while the new database was created (the datasource password decrypts fine, so the secrets store works), and one `grafana-apiserver` "invalid name" with no further context. Treated as start-up noise.
+- ℹ️ v1.0's 8 legacy chart panels show "No data". Not caused by the upgrade: they filter on v1.0's fixed `SensorID` list (`pi3,pi4,pi5`), and no current node has those names (the same query returns 1,440 points with `pi105`). Grafana 13 still renders the legacy `graph` panels.
+
+The plan as executed:
 
 **Why.** 12.0.2 is from June 2025. The new major version adds cross-filtering on status history and state timeline (13.2), so a click on a node in the reachability grid could filter the whole dashboard, and a revamped gauge (12.4/13.0). 13.2.4 publishes amd64, arm64 and arm/v7 images (checked on Docker Hub, 2026-10-19). A 13.3 image did not exist yet; 13.3 adds the data-driven Text panel (preview), which this plan doesn't need.
 
@@ -272,7 +279,7 @@ Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0,
 | Dashboard v2.0 "Failures (last hour)" only shows tiles for failure types that happened; there are no `0` tiles for the others. | Dashboard v2.0 review | Cosmetic | A future dashboard version |
 | Dashboard v2.0 reachability grid: outages shorter than one cell (5 min at 24 h) aren't visible there (they are under *Failures over time*), and the first slice before the range can be a clipped false "no reply". | Dashboard v2.0 test | Low, by design | Documented in the panel description |
 | InfluxDB's healthcheck passes against the temporary server it runs during first-start setup, so connections can be refused for a few seconds right after the very first start. | Phase 5 fresh-install test | Low, first start only | Documented in `Infrastructure/README.md` → Troubleshooting |
-| Grafana 12 logs that anonymous Admin access is deprecated; a future version will limit anonymous users to Viewer, which would make the dashboards read-only without a login. | Phase 5 Grafana logs | Low, future | Decide on a login before upgrading Grafana |
+| Grafana 12 logs that anonymous Admin access is deprecated; a future version will limit anonymous users to Viewer, which would make the dashboards read-only without a login. | Phase 5 Grafana logs | Low, future | Still works in 13.2.4 (checked 2026-10-19). Check again at every Grafana upgrade. |
 | Dashboard v1.0 (kept as-is): speed gauges turn red when the connection is *fast* (default "red above 80"), no units, a hardcoded router IP (`192.168.192.1`) mixes the router into internet averages, and a fixed `SensorID` list (`pi3,pi4,pi5`) hides other nodes. | Dashboard analysis | Superseded by v2.0 | Not fixing; v1.0 stays for comparison |
 
 ---
