@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Dashboard v2.2 ✅ gauges and click-to-filter · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -162,6 +162,15 @@ Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtes
 - ⏳ **Not verified:** the arm64 and armhf builds on the Pis, and the hourly cron run (the verified runs were manual).
 - ⚠️ **Finding:** the first two real Ookla runs auto-selected server 1958 and measured only 248 and 332 Mbit/s down (upload ~101), where a run earlier the same evening against server 38577 (AWIST, Kraków) measured 883. Unpinned results vary with the server Ookla picks, so the dashboard would flag them as far below plan. Recommendation: set `SPEED_TEST_SERVER_ID` to a server that reaches ~900 (e.g. 38577) on every Pi and compare a few runs. Not yet decided by the user.
 - ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
+
+## Dashboard v2.2 ✅ (not in the original plan)
+
+Done 2026-10-19 at the user's request, after the Grafana 13.2.4 upgrade; uncommitted. Uses the Grafana 13 features that fit this dashboard.
+
+- ✅ **Speed tiles are circular gauges** (Grafana 13 gauge: `shape: circle`, sparkline, rounded bars, centre glow): the value is the last test, the sparkline the last 24 h of hourly tests, and the full circle 120 % of the node's own expected speed (per-node `max` and thresholds). The row is taller (7 grid units) so four gauges stay readable; Grafana lays them out 2×2.
+- 🔀 **Click to filter, with data links instead of native cross-filtering.** Grafana 13.2's cross-filtering needs "Group by" for status history and time series, and only Prometheus and Loki support Group by; it is also not documented to apply to raw InfluxQL queries (the InfluxDB plugin is no longer in Grafana's main repository, so this couldn't be confirmed in source). Data links reach the same goal through the dashboard's own `$node`/`$target` variables: "Show only <node>" on every per-node tile, gauge, line and table Node column; node and target on the reachability grid; target on *Latency by target*. Curl panels get no target link (their addresses are URLs, not ping targets). A dashboard link "All nodes and targets" resets the filters.
+- ✅ Verified on the live stack: v2.2 loads on Grafana 13.2.4; screenshots of the gauges, and of the exact URL a click on `pi105` opens (every panel filtered to `pi105`, time range kept). InfluxQL frames carry `computerTag`/`address` labels, which the links use. Not verified: an actual mouse click (headless screenshots can't hover).
+- v2.1 stays as a frozen file; the generator now produces v2.2 (`VERSION`/`UID` constants).
 
 ## Grafana upgrade 12.0.2 → 13.2.4 ✅
 

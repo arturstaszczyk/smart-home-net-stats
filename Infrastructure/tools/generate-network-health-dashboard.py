@@ -1,20 +1,22 @@
-"""Generates the "Network health v2.1" Grafana dashboard.
+"""Generates the "Network health v2.2" Grafana dashboard.
 
-Writes ../grafana/dashboards/network-health-v2.1.json (relative to this script), which Grafana
+Writes ../grafana/dashboards/network-health-v2.2.json (relative to this script), which Grafana
 provisions automatically within 30 seconds. Python 3 standard library only:
 
     python3 Infrastructure/tools/generate-network-health-dashboard.py [output.json]
 
 The generated JSON is committed; edit this script and regenerate rather than editing the JSON
-by hand. See Infrastructure/README.md, "Dashboards". network-health-v2.0.json is the frozen
-output of the previous version of this script.
+by hand. See Infrastructure/README.md, "Dashboards". network-health-v2.0.json and v2.1.json are the
+frozen outputs of earlier versions of this script. Needs Grafana 13 (circular gauges with sparklines).
 """
 import re
 import json
 import sys
 from pathlib import Path
 
-OUTPUT = Path(__file__).resolve().parent.parent / 'grafana' / 'dashboards' / 'network-health-v2.1.json'
+VERSION = '2.2'
+UID = 'smart-home-network-v2-2'
+OUTPUT = Path(__file__).resolve().parent.parent / 'grafana' / 'dashboards' / f'network-health-v{VERSION}.json'
 
 DS = {'type': 'influxdb', 'uid': 'smart-home-influxdb'}
 LAN = r'/^(10|127|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\./'
@@ -91,6 +93,25 @@ def stat(title, desc, targets, pos, unit, thresholds, time_from=None, calc='last
     return p
 
 
+def gauge(title, desc, targets, pos, unit, thresholds, max_, time_from=None, overrides=None, interval=None):
+    """Grafana 13 circular gauge, one per series, with a sparkline of the series over the panel's time range."""
+    p = {'type': 'gauge', 'id': nid(), 'title': title, 'description': desc, 'datasource': DS,
+         'gridPos': pos, 'targets': targets,
+         'options': {'reduceOptions': {'calcs': ['lastNotNull'], 'fields': '', 'values': False},
+                     'shape': 'circle', 'sparkline': True, 'barShape': 'rounded', 'barWidthFactor': 0.5,
+                     'endpointMarker': 'point', 'textMode': 'value_and_name', 'showThresholdMarkers': False,
+                     'showThresholdLabels': False, 'sizing': 'auto', 'segmentCount': 1,
+                     'effects': {'centerGlow': True, 'gradient': True, 'barGlow': False}},
+         'fieldConfig': {'defaults': {'unit': unit, 'thresholds': thresholds, 'min': 0, 'max': max_,
+                                      'decimals': 0, 'color': {'mode': 'thresholds'}},
+                         'overrides': overrides or []}}
+    if time_from:
+        p['timeFrom'] = time_from
+    if interval:
+        p['interval'] = interval
+    return p
+
+
 def timeseries(title, desc, targets, pos, unit, color_mode='palette-classic-by-name',
                overrides=None, draw='line', stack=False, thresholds=None, th_style='off',
                interval=None, points='auto', min_=None, soft_max=None, legend_calcs=('mean', 'max', 'lastNotNull'),
@@ -153,10 +174,13 @@ def speed_steps(exp):
     return steps('red', (round(exp * CRIT_BELOW, 6), 'orange'), (round(exp * WARN_BELOW, 6), 'green'))
 
 
-def per_node_speed_overrides(field):
-    return [{'matcher': {'id': 'byName', 'options': n},
-             'properties': [{'id': 'thresholds', 'value': speed_steps(expected(n, field))}]}
-            for n in NODE_EXPECTED]
+GAUGE_HEADROOM = 1.2   # a gauge's full circle is 120 % of the node's expected speed
+
+
+def per_node_speed_overrides(field, scale=False):
+    props = lambda n: ([{'id': 'thresholds', 'value': speed_steps(expected(n, field))}] +
+                       ([{'id': 'max', 'value': round(expected(n, field) * GAUGE_HEADROOM, 6)}] if scale else []))
+    return [{'matcher': {'id': 'byName', 'options': n}, 'properties': props(n)} for n in NODE_EXPECTED]
 
 
 EXPECTED_TEXT = ('Each node is judged against its own expected speed: ' +
@@ -193,16 +217,18 @@ panels += [
 ]
 y += 5
 panels += [
-    stat('Last download', 'Most recent speed test per node (tests run hourly). ' + EXPECTED_TEXT,
-         [q(f'SELECT last("download") FROM "speedtest" WHERE {NODE} AND $timeFilter GROUP BY "computerTag"',
-            '$tag_computerTag')],
-         {'x': 0, 'y': y, 'w': 6, 'h': 5}, 'Mbits', speed_steps(PLAN['download']), '3h', decimals=0,
-         overrides=per_node_speed_overrides('download')),
-    stat('Last upload', 'Most recent speed test per node. ' + EXPECTED_TEXT,
-         [q(f'SELECT last("upload") FROM "speedtest" WHERE {NODE} AND $timeFilter GROUP BY "computerTag"',
-            '$tag_computerTag')],
-         {'x': 6, 'y': y, 'w': 6, 'h': 5}, 'Mbits', speed_steps(PLAN['upload']), '3h', decimals=0,
-         overrides=per_node_speed_overrides('upload')),
+    gauge('Last download', 'Most recent speed test per node (the value), with the last 24 hours of hourly tests '
+          'as a sparkline. The full circle is 120 % of the node\'s expected speed. ' + EXPECTED_TEXT,
+          [q(f'SELECT mean("download") FROM "speedtest" WHERE {NODE} AND $timeFilter '
+             'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag')],
+          {'x': 0, 'y': y, 'w': 6, 'h': 7}, 'Mbits', speed_steps(PLAN['download']),
+          round(PLAN['download'] * GAUGE_HEADROOM), '24h', per_node_speed_overrides('download', scale=True), '1h'),
+    gauge('Last upload', 'Most recent speed test per node (the value), with the last 24 hours of hourly tests '
+          'as a sparkline. The full circle is 120 % of the node\'s expected speed. ' + EXPECTED_TEXT,
+          [q(f'SELECT mean("upload") FROM "speedtest" WHERE {NODE} AND $timeFilter '
+             'GROUP BY time($__interval), "computerTag" fill(none)', '$tag_computerTag')],
+          {'x': 6, 'y': y, 'w': 6, 'h': 7}, 'Mbits', speed_steps(PLAN['upload']),
+          round(PLAN['upload'] * GAUGE_HEADROOM), '24h', per_node_speed_overrides('upload', scale=True), '1h'),
     stat('Speed tests below expected', f'How many speed tests in the selected time range measured download or '
          f'upload below {WARN_BELOW:.0%} of their node\'s expected speed, all selected nodes. ' + EXPECTED_TEXT +
          ' Details per node in the Bandwidth section.',
@@ -210,16 +236,16 @@ panels += [
             'download', 'A'),
           q(f'SELECT count("upload") FROM "speedtest" WHERE {below_expected("upload")} AND {NODE} AND $timeFilter',
             'upload', 'B')],
-         {'x': 12, 'y': y, 'w': 6, 'h': 5}, 'none', steps('green', (1, 'orange'), (3, 'red')), no_value='0'),
+         {'x': 12, 'y': y, 'w': 6, 'h': 7}, 'none', steps('green', (1, 'orange'), (3, 'red')), no_value='0'),
     stat('Failures (last hour)', 'Commands that failed outright in the last hour, all selected nodes: '
          'ping with no reply at all, curl errors or timeouts (10 s), and failed speed tests.',
          [q(f'SELECT count("count") FROM "pingError" WHERE {NODE} AND $timeFilter', 'ping', 'A'),
           q(f'SELECT count("count") FROM "curlError" WHERE {NODE} AND $timeFilter', 'curl', 'B'),
           q(f'SELECT count("count") FROM "speedtest-error" WHERE {NODE} AND $timeFilter', 'speed test', 'C')],
-         {'x': 18, 'y': y, 'w': 6, 'h': 5}, 'none', steps('green', (1, 'orange'), (10, 'red')), '1h',
+         {'x': 18, 'y': y, 'w': 6, 'h': 7}, 'none', steps('green', (1, 'orange'), (10, 'red')), '1h',
          no_value='0'),
 ]
-y += 5
+y += 7   # taller row, so the circular gauges have room
 last_seen = {
     'type': 'table', 'id': nid(), 'title': 'Last report per node',
     'description': 'When each node last wrote a ping result (looks back 7 days, ignores the node filter), and how '
@@ -495,17 +521,66 @@ panels += [
 ]
 y += 13
 
+# ---------------------------------------------------------------- Click to filter
+# Grafana's native cross-filtering needs "Group by", which InfluxDB doesn't support, and our queries are
+# raw InfluxQL. Data links do the same job through our own $node/$target variables: a click on a node's
+# tile, line, grid cell or table row reloads this dashboard for that node, keeping the time range.
+TIME = '${__url_time_range}'
+LINK_NODE = {'title': 'Show only ${__field.labels.computerTag}', 'targetBlank': False,
+             'url': f'/d/{UID}/?orgId=1&var-node=${{__field.labels.computerTag}}&${{target:queryparam}}&{TIME}'}
+LINK_NODE_TARGET = {'title': 'Show only ${__field.labels.computerTag} → ${__field.labels.address}',
+                    'targetBlank': False,
+                    'url': f'/d/{UID}/?orgId=1&var-node=${{__field.labels.computerTag}}'
+                           f'&var-target=${{__field.labels.address}}&{TIME}'}
+LINK_TARGET = {'title': 'Show only target ${__field.labels.address}', 'targetBlank': False,
+               'url': f'/d/{UID}/?orgId=1&${{node:queryparam}}&var-target=${{__field.labels.address}}&{TIME}'}
+LINK_TABLE_NODE = {'title': 'Show only ${__value.raw}', 'targetBlank': False,
+                   'url': f'/d/{UID}/?orgId=1&var-node=${{__value.raw}}&${{target:queryparam}}&{TIME}'}
+
+
+def group_by_sources(panel):
+    return ' '.join(t.get('query', '') for t in panel.get('targets', []))
+
+
+def add_links(panel):
+    group_by = ' '.join(t.get('query', '').split('GROUP BY')[1] for t in panel.get('targets', [])
+                        if 'GROUP BY' in t.get('query', ''))
+    by_node, by_address = '"computerTag"' in group_by, '"address"' in group_by
+    defaults = panel.get('fieldConfig', {}).get('defaults')
+    if panel['type'] == 'table':
+        node_col = [o for o in panel['fieldConfig']['overrides'] if o['matcher'].get('options') == 'Node']
+        if not node_col:
+            node_col = [{'matcher': {'id': 'byName', 'options': 'Node'}, 'properties': []}]
+            panel['fieldConfig']['overrides'].append(node_col[0])
+        node_col[0]['properties'].append({'id': 'links', 'value': [LINK_TABLE_NODE]})
+    elif defaults is None or panel['type'] == 'barchart':
+        return
+    elif by_node and by_address:
+        defaults['links'] = [LINK_NODE_TARGET]
+    elif by_address and '"curl"' not in group_by_sources(panel):
+        defaults['links'] = [LINK_TARGET]    # ping targets only: curl addresses are URLs, not $target values
+    elif by_node:
+        defaults['links'] = [LINK_NODE]
+
+
+for panel in panels:
+    if panel['type'] != 'row':
+        add_links(panel)
+
 var = lambda name, label, query: {
     'type': 'query', 'name': name, 'label': label, 'datasource': DS, 'query': query,
     'multi': True, 'includeAll': True, 'refresh': 2, 'sort': 1,
     'current': {'selected': True, 'text': ['All'], 'value': ['$__all']}, 'options': [], 'hide': 0}
 
 dashboard = {
-    'uid': 'smart-home-network-v2-1', 'id': None, 'title': 'Network health v2.1',
+    'uid': UID, 'id': None, 'title': f'Network health v{VERSION}',
     'description': 'Per-node network health: latency, reachability, web response and bandwidth vs each node\'s expected speed.',
-    'tags': ['smart-home', 'v2.1'], 'editable': True, 'graphTooltip': 1, 'schemaVersion': 39,
+    'tags': ['smart-home', f'v{VERSION}'], 'editable': True, 'graphTooltip': 1, 'schemaVersion': 39,
     'time': {'from': 'now-24h', 'to': 'now'}, 'refresh': '1m', 'timezone': '', 'version': 1,
-    'links': [{'type': 'dashboards', 'tags': ['smart-home'], 'asDropdown': False, 'title': 'Dashboards',
+    'links': [{'type': 'link', 'title': 'All nodes and targets', 'icon': 'dashboard', 'keepTime': True,
+               'url': f'/d/{UID}/?orgId=1&var-node=$__all&var-target=$__all', 'includeVars': False,
+               'asDropdown': False, 'targetBlank': False, 'tags': []},
+              {'type': 'dashboards', 'tags': ['smart-home'], 'asDropdown': False, 'title': 'Dashboards',
                'includeVars': False, 'keepTime': True}],
     'templating': {'list': [
         var('node', 'Node', 'SHOW TAG VALUES FROM "ping" WITH KEY = "computerTag"'),
