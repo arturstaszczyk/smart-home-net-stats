@@ -1,6 +1,6 @@
 # Smart Home Net Stats service
 
-The service is a Node.js agent. It runs `ping`, `curl` and the Ookla `speedtest` command. It reads their output and writes the results to InfluxDB as time series. In the installed system, the service runs in Docker. Cron starts the `frequent` batch (ping and curl) every minute. Cron starts the `infrequent` batch (speed test) one time each hour.
+The service is a Node.js agent. It runs `ping`, `curl`, `dig` and the Ookla `speedtest` command. It reads their output and writes the results to InfluxDB as time series. In the installed system, the service runs in Docker. Cron starts the `frequent` batch (ping, curl and DNS) every minute. Cron starts the `infrequent` batch (speed test) one time each hour.
 
 The service runs on each Pi that does measurements. It does not run on the infrastructure host. Each Pi writes to the InfluxDB on the infrastructure host through the LAN. Refer to `../Infrastructure/README.md`. Each Pi adds its `COMPUTER_NAME` as a tag to its data.
 
@@ -15,7 +15,7 @@ The service runs on each Pi that does measurements. It does not run on the infra
 
   CAUTION: If your shell tells you to do `sudo apt install cmdtest`, do not do it. The `yarn` command in that package is a different tool.
 
-* The commands that the service runs: `ping`, `curl`, `speedtest` (only for the `infrequent` batch) and `ifconfig` (only for the data-used command, which is off).
+* The commands that the service runs: `ping`, `curl`, `dig` (package `dnsutils` on Debian and Ubuntu), `speedtest` (only for the `infrequent` batch) and `ifconfig` (only for the data-used command, which is off).
 * The `speedtest` command must be the **official Ookla Speedtest CLI** (https://www.speedtest.net/apps/cli). The service reads its JSON output. Install it from the Ookla page. For Debian, Ubuntu and Raspberry Pi OS, the page has an apt repository.
 * Do not use the `speedtest-cli` package. It is an older Python tool from sivel. It also installs a `/usr/bin/speedtest` command. It shows speeds that are too low on fast connections (approximately 700 Mbit/s, where Ookla shows 880 Mbit/s on the same gigabit line). Remove it before you install the Ookla tool (`sudo apt remove speedtest-cli`). The command `speedtest --version` must show `Speedtest by Ookla`. The Docker image installs the Ookla tool itself.
 * An InfluxDB 1.8 that the computer can connect to. Refer to `../Infrastructure/README.md`.
@@ -38,6 +38,9 @@ cp .env.template .env && nano .env
 | `COMPUTER_NAME` | The service writes this name as the `computerTag` tag on all data. Grafana uses it to show the Pis separately. Dashboard v2.0 shows new names automatically. Dashboard v1.0 shows only `pi3`, `pi4` and `pi5`. |
 | `SPEED_TEST_MINUTE` | The minute of the hour (0–59) when this Pi does its speed test. A test uses all of the internet connection for approximately 25 seconds. Thus, give each Pi a different minute, with equal intervals (for 3 Pis: `0`, `20`, `40`). |
 | `SPEED_TEST_SERVER_ID` | Optional. The ID of the Ookla server for all tests (`speedtest --servers` shows the servers near you). Use the same ID on all Pis. Then you can compare the results. If it is empty, Ookla selects the nearest server for each test. |
+| `DNS_SERVERS` | Optional. More DNS resolvers to examine every minute, as `name=address` pairs with commas between them. For example: `local=10.0.0.53,router=10.0.0.1,public=1.1.1.1`. Use only the resolvers that this node can reach. The service always examines the usual resolver of the node ("system"). Refer to [DNS checks](#dns-checks). |
+| `DNS_CACHED_NAME` | Optional. The name for the "cached" query. The default is `google.com`. |
+| `DNS_UNCACHED_DOMAIN` | Optional. The domain for the random names of the "uncached" query. The default is `example.com`. |
 | `SERVICE_IMAGE` | Only for Docker. `smart-home-service` to build the image on this computer, or your Docker Hub tag to download it (refer to [Build](#build)). |
 | `DATA_DIR` | Only for Docker. The host directory for the logs (`<DATA_DIR>/service/`). The default is `/var/lib/smart-home`. |
 
@@ -58,7 +61,7 @@ Do this command in this `Service/` directory:
 docker compose build
 ```
 
-This command builds `Dockerfile.service` for the architecture of this computer. It gives the image the tag `$SERVICE_IMAGE`. The image is `node:22-bookworm-slim` with `ping`, `curl`, the Ookla `speedtest` command and `cron`. The image contains only the production dependencies. The Ookla tool has the fixed version 1.2.0, and the build examines its checksum for each architecture.
+This command builds `Dockerfile.service` for the architecture of this computer. It gives the image the tag `$SERVICE_IMAGE`. The image is `node:22-bookworm-slim` with `ping`, `curl`, `dig`, the Ookla `speedtest` command and `cron`. The image contains only the production dependencies. The Ookla tool has the fixed version 1.2.0, and the build examines its checksum for each architecture.
 
 You can build the image on each Pi, but this is slow. It is faster to build the image one time for all Pi architectures and send it to Docker Hub:
 
@@ -160,10 +163,34 @@ The data that each batch writes:
 | --- | --- | --- |
 | `ping` | `address`, `computerTag` | `avg`, `min`, `max`, `mdev` (ms), `packetsPercent`, `packetsSent` |
 | `curl` | `address`, `computerTag` | `namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`: the time in seconds from the start of the request to each step (`appconnect` is 0 for HTTP without TLS) |
+| `dns` | `computerTag`, `resolver`, `query` (`cached` or `uncached`) | `queryTime` (ms) |
 | `speedtest` | `computerTag` | `download`, `upload` (Mbit/s), `ping`, `jitter` (ms), `packetLoss` (%, if the server measures it), `downloadLatency`, `uploadLatency` (ms, the latency while the test uses all of the connection), `serverId` |
-| `pingError`, `curlError`, `speedtest-error` | `computerTag` (and `address`), `error` | `count` = 1 for each command that failed |
+| `pingError`, `curlError`, `speedtest-error`, `dnsError` | `computerTag` (and `address`, or `resolver` and `query`), `error` | `count` = 1 for each command that failed. For `dnsError`, `error` is `no reply` or the status of the resolver, for example `servfail`. |
 
-CAUTION: Do not change the names of the measurements or the fields (`ping`, `pingError`, `curl`, `curlError`, `speedtest`, `speedtest-error`). The Grafana dashboards use these names. If a name changes, the dashboards show no data and no error.
+CAUTION: Do not change the names of the measurements or the fields (`ping`, `pingError`, `curl`, `curlError`, `dns`, `dnsError`, `speedtest`, `speedtest-error`). The Grafana dashboards use these names. If a name changes, the dashboards show no data and no error.
+
+### DNS checks
+
+Every minute, the service sends DNS queries with `dig`. Each query goes to one resolver:
+
+* "system": the usual resolver of the node. Applications use this resolver. The service always examines it.
+* Each resolver in `DNS_SERVERS`. The service sends the query directly to the address of that resolver.
+
+The service sends two queries to each resolver:
+
+* "cached": a query for `DNS_CACHED_NAME`. The resolver usually has this name in its memory. Thus, this query measures the path to the resolver.
+* "uncached": a query for a new random name in `DNS_UNCACHED_DOMAIN`. A local resolver (for example a Pi-hole or a router) must ask its upstream server. Thus, this query also measures the upstream path. A large public resolver can answer it from its memory.
+
+If a resolver does not reply, or replies with an error (for example SERVFAIL), the service writes `dnsError`.
+
+Use the results to find which device makes DNS slow:
+
+* If only "system" is slow, the problem is on the node.
+* If a local resolver is slow for "cached" queries, the problem is that resolver or the path to it.
+* If a local resolver is slow only for "uncached" queries, the problem is its upstream server.
+* If the public resolver is also slow, the problem is the internet connection.
+
+Each query takes approximately 1–100 ms. If a resolver does not reply, the query stops after 2 seconds.
 
 ### Speed test: tool, schedule and cost
 

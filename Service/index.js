@@ -6,6 +6,7 @@ import PingCommand from './Commands/PingCommand.js'
 import CurlCommand from './Commands/CurlCommand.js'
 import DataUsedCommand from './Commands/DataUsedCommand.js'
 import SpeedTestCommand from './Commands/SpeedTestCommand.js'
+import DnsCommand, { parseDnsServers } from './Commands/DnsCommand.js'
 
 import InfluxWriter from './Influx/influxWriter.js'
 
@@ -21,6 +22,16 @@ const frequentCommands = [
     [CurlCommand, { address: 'https://www.wp.pl', computerTag:process.env.COMPUTER_NAME }],
     [CurlCommand, { address: 'https://www.wikipedia.org', computerTag:process.env.COMPUTER_NAME }],
     [CurlCommand, { address: process.env.ROUTER_1, computerTag:process.env.COMPUTER_NAME }],
+    // DNS: the node's normal resolver ("system") plus each resolver named in DNS_SERVERS,
+    // each asked for a cached name and a never-seen one. All addresses and names come from .env.
+    ..._.flatMap([{ resolver: 'system' }, ...parseDnsServers(process.env.DNS_SERVERS)],
+        (dnsServer) => _.map(['cached', 'uncached'], (query) => [DnsCommand, {
+            ...dnsServer,
+            query,
+            cachedName: process.env.DNS_CACHED_NAME,
+            uncachedDomain: process.env.DNS_UNCACHED_DOMAIN,
+            computerTag:process.env.COMPUTER_NAME,
+        }])),
 ]
 
 const infrequentCommands = [

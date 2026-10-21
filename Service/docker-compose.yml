@@ -21,5 +21,8 @@ services:
       COMPUTER_NAME: ${COMPUTER_NAME:-}
       SPEED_TEST_MINUTE: ${SPEED_TEST_MINUTE:-6}
       SPEED_TEST_SERVER_ID: ${SPEED_TEST_SERVER_ID:-}
+      DNS_SERVERS: ${DNS_SERVERS:-}
+      DNS_CACHED_NAME: ${DNS_CACHED_NAME:-}
+      DNS_UNCACHED_DOMAIN: ${DNS_UNCACHED_DOMAIN:-}
     volumes:
       - ${DATA_DIR:-/var/lib/smart-home}/service:/var/log

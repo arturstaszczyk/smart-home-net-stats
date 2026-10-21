@@ -1,6 +1,6 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Dashboard v2.2 ✅ gauges and click-to-filter · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Dashboard v2.2 ✅ gauges and click-to-filter · DNS checks + dashboard v2.3 ✅ (uncommitted) · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
 >
 > | Phase | Commit | Branch |
 > | --- | --- | --- |
@@ -76,7 +76,7 @@ Use the built-in `node:test` runner and `node:assert`, so there are zero new dep
 - ⏳ `Service/Influx/__tests__/influxWriter.test.js`: inject a stub write API (see the Phase 3 constructor change) and assert tags become Influx tags and metrics become float fields.
 - ⏳ Extend the README's **Test** section: `yarn test`, how to run a single file (`node --test Commands/__tests__/pingCommand.test.js`), where the fixtures live and how to capture a new one from real CLI output, and a note that the no-match tests fail on purpose until Phase 3.
 
-## Phase 3 — Correctness fixes ⏳ (10 items: 1 done early, 2 partly)
+## Phase 3 — Correctness fixes ⏳ (11 items: 1 done early, 2 partly)
 
 Each of these is a real defect, not a style preference:
 
@@ -90,6 +90,7 @@ Each of these is a real defect, not a style preference:
 8. 🔀 **Half done.** The `INFLUS_PASS` typo in `Service/.env.template` was fixed in Phase 5, because compose now reads that same file. ⏳ Still missing: `WAN_INTERFACE` (used by `DataUsedCommand`) in the template.
 9. ⏳ **Commands never reject** *(found by the Phase 2 tests)*. `BaseCommand._execute` calls `onClose()` without the exit code, so the `if (error) reject(...)` branch in every command is dead code: a failed command resolves with its `*Error` metric. The written data is correct today, but `runCommands`' `catch` never sees a command failure, and any future code relying on rejection would silently break. Pass the exit code to `onClose`, or settle the promise from the `exec` callback (fold into #1 and the Phase 4 template method). `baseCommand.test.js` pins the current behaviour and must change with the fix.
 10. ⏳ **Ping round-trip times keep comma decimals** *(found by the Phase 2 tests)*. `PingCommand.parseOutput` normalises the loss percentage but not `min`/`avg`/`max`/`mdev`, so under a comma-decimal locale `floatField` gets `"9,028"`. Apply the same `.replace(',', '.')`. Pinned by a `todo` test.
+11. ⏳ **Impossible Ookla values are stored as-is** *(found in real data, 2026-10-21)*. On 2026-10-20 at 17:44 Ookla reported `upload.latency.iqm` = 1,488,485,955 ms (~17 days) for `server-101`, with normal download/upload in the same test. One such value distorts every average of `uploadLatency`. In `SpeedTestCommand.parseOutput`, drop values outside plausible ranges instead of storing them (for example latencies above 60 000 ms, negative values, bandwidth above 10 Gbit/s), log what was dropped, and keep the rest of the result. Add a unit test with that real value. Clean the existing bad point in InfluxDB, or let dashboards ignore it.
 
 ## Phase 4 — Architecture ⏳
 
@@ -162,6 +163,17 @@ Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtes
 - ⏳ **Not verified:** the arm64 and armhf builds on the Pis, and the hourly cron run (the verified runs were manual).
 - ⚠️ **Finding:** the first two real Ookla runs auto-selected server 1958 and measured only 248 and 332 Mbit/s down (upload ~101), where a run earlier the same evening against server 38577 (AWIST, Kraków) measured 883. Unpinned results vary with the server Ookla picks, so the dashboard would flag them as far below plan. Recommendation: set `SPEED_TEST_SERVER_ID` to a server that reaches ~900 (e.g. 38577) on every Pi and compare a few runs. Not yet decided by the user.
 - ⏳ Not done: dashboard panels for the new fields (loaded latency, jitter, server). Open question for the user: licence before pushing the image to a public Docker Hub repository.
+
+## DNS checks and dashboard v2.3 ✅ (not in the original plan)
+
+Done 2026-10-21 with the user's explicit approval, on the condition that nothing depends on (hard-codes) the network layout; uncommitted. Motivation: occasional 4 s DNS lookups on every node (mostly pi105) and ping failures to host names, while the one existing DNS number (curl's name lookup) can't show which hop is slow. The path is node → router → Pi-hole → upstream; the router forwards to the Pi-hole, which sees almost all queries as coming from the router.
+
+- ✅ **`DnsCommand`** (frequent batch): `dig [@server] <name> +tries=1 +time=2` against the node's normal resolver ("system") and each resolver in **`DNS_SERVERS`** (`name=address` pairs; unsafe entries skipped). Two queries each: "cached" (`DNS_CACHED_NAME`, default `google.com`) and "uncached" (a random name under `DNS_UNCACHED_DOMAIN`, default `example.com`). Success is decided from dig's `status:` line, because dig exits 0 for SERVFAIL. Writes `dns` (`queryTime` ms; tags `resolver`, `query`) or `dnsError` (`error` = `no reply` or the lower-case status). No addresses in code; the template shows only a generic example.
+- ✅ Dockerfile installs `dnsutils`; compose passes the three settings.
+- ✅ 10 unit tests with real `dig` output (answer, random name, SERVFAIL, no reply; the user's addresses replaced with documentation addresses), settings parsing and validation, and `execute()` against a fake `dig`. Suite: 33 tests, 30 pass, 3 known `todo`.
+- ✅ Real run on `server-101` from settings: system/router "cached" ~0–1 ms, "uncached" 55–70 ms; 1.1.1.1 15–23 ms.
+- ✅ **Dashboard v2.3**: a DNS row (lookup time per node, one line per resolver and query; table with median, p95, max and failures per node and resolver), DNS failures in the three failure panels, and curl's lookup panel renamed "Name lookup time in curl per node". All 48 queries ran through Grafana without errors. v2.2 stays as a frozen file.
+- ⏳ **Not done (user):** rebuild and deploy the service on each node, and set `DNS_SERVERS` per node with the resolvers that node can reach. The DNS panels stay empty until then.
 
 ## Dashboard v2.2 ✅ (not in the original plan)
 
@@ -284,6 +296,7 @@ Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0,
 | Ookla's apt repository has no Ubuntu 24.04 (noble) release (`404`), yet its install script reports success; the broken source then makes every `apt update` fail. Ookla's package also conflicts with sivel's `speedtest-cli`, which installs the same `/usr/bin/speedtest`. | Local install on Ubuntu 24.04 | Low (local runs only; the Docker image downloads the binary directly) | Docs: `Service/README.md` should give the `jammy` workaround or the static binary, and say to remove `speedtest-cli` first. |
 | Each speed test saturates the connection for ~25 s, so ping and curl results from that minute, on **every** node, show inflated latency, and the dashboard doesn't mark them. | Ookla data-cost/interference review | Low | Phase 4 scheduler: skip or tag the `frequent` batch during the node's own test. Other nodes' tests can only be shown, e.g. as Grafana annotations. |
 | An Ookla failure records only `count = 1`; the reason (a JSON log message on stderr) is lost. | Real failure captured for the tests | Low | With Phase 3 #1: store the message, e.g. as a tag with low cardinality, or log it. |
+| Ookla sometimes reports impossible values: `uploadLatency` = 1,488,485,955 ms (~17 days) on `server-101`, 2026-10-20 17:44. Stored as-is, it distorts averages. | Real data, dashboard v2.2 review | Low (data quality) | Phase 3 #11 |
 | Ookla prints its licence notice on stderr on every run, which fills `cron2.log`. | Real Ookla runs | Cosmetic | Redirect or filter stderr when it's not an error. |
 | Dashboard v2.0 "Failures (last hour)" only shows tiles for failure types that happened; there are no `0` tiles for the others. | Dashboard v2.0 review | Cosmetic | A future dashboard version |
 | Dashboard v2.0 reachability grid: outages shorter than one cell (5 min at 24 h) aren't visible there (they are under *Failures over time*), and the first slice before the range can be a clipped false "no reply". | Dashboard v2.0 test | Low, by design | Documented in the panel description |

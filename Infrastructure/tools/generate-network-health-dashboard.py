@@ -1,21 +1,21 @@
-"""Generates the "Network health v2.2" Grafana dashboard.
+"""Generates the "Network health v2.3" Grafana dashboard.
 
-Writes ../grafana/dashboards/network-health-v2.2.json (relative to this script), which Grafana
+Writes ../grafana/dashboards/network-health-v2.3.json (relative to this script), which Grafana
 provisions automatically within 30 seconds. Python 3 standard library only:
 
     python3 Infrastructure/tools/generate-network-health-dashboard.py [output.json]
 
 The generated JSON is committed; edit this script and regenerate rather than editing the JSON
-by hand. See Infrastructure/README.md, "Dashboards". network-health-v2.0.json and v2.1.json are the
-frozen outputs of earlier versions of this script. Needs Grafana 13 (circular gauges with sparklines).
+by hand. See Infrastructure/README.md, "Dashboards". network-health-v2.0.json, v2.1.json and v2.2.json
+are the frozen outputs of earlier versions of this script. Needs Grafana 13 (circular gauges with sparklines).
 """
 import re
 import json
 import sys
 from pathlib import Path
 
-VERSION = '2.2'
-UID = 'smart-home-network-v2-2'
+VERSION = '2.3'
+UID = 'smart-home-network-v2-3'
 OUTPUT = Path(__file__).resolve().parent.parent / 'grafana' / 'dashboards' / f'network-health-v{VERSION}.json'
 
 DS = {'type': 'influxdb', 'uid': 'smart-home-influxdb'}
@@ -39,7 +39,9 @@ NODE_COLORS = {'pi3': '#3987e5', 'pi4': '#d95926', 'pi5': '#199e70'}
 TARGET_COLORS = [('google', '#3987e5'), ('wp\\.pl', '#d95926'), ('wikipedia', '#199e70'),
                  ('8\\.8\\.8\\.8', '#c98500'), ('^(10|127|192\\.168|172\\.)', '#d55181')]
 PHASE_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181']
-FAILURE_COLORS = {'ping failures': '#9085e9', 'curl failures': '#d55181', 'speed test failures': '#c98500'}
+# Stacked in this order; validated as adjacent pairs (dark surface), including colour-vision deficiency.
+FAILURE_COLORS = {'ping failures': '#9085e9', 'curl failures': '#d55181', 'speed test failures': '#c98500',
+                  'dns failures': '#3987e5'}
 
 _id = [0]
 
@@ -238,10 +240,12 @@ panels += [
             'upload', 'B')],
          {'x': 12, 'y': y, 'w': 6, 'h': 7}, 'none', steps('green', (1, 'orange'), (3, 'red')), no_value='0'),
     stat('Failures (last hour)', 'Commands that failed outright in the last hour, all selected nodes: '
-         'ping with no reply at all, curl errors or timeouts (10 s), and failed speed tests.',
+         'ping with no reply at all, curl errors or timeouts (10 s), failed speed tests, and DNS lookups '
+         'with no answer or a resolver error.',
          [q(f'SELECT count("count") FROM "pingError" WHERE {NODE} AND $timeFilter', 'ping', 'A'),
           q(f'SELECT count("count") FROM "curlError" WHERE {NODE} AND $timeFilter', 'curl', 'B'),
-          q(f'SELECT count("count") FROM "speedtest-error" WHERE {NODE} AND $timeFilter', 'speed test', 'C')],
+          q(f'SELECT count("count") FROM "speedtest-error" WHERE {NODE} AND $timeFilter', 'speed test', 'C'),
+          q(f'SELECT count("count") FROM "dnsError" WHERE {NODE} AND $timeFilter', 'dns', 'D')],
          {'x': 18, 'y': y, 'w': 6, 'h': 7}, 'none', steps('green', (1, 'orange'), (10, 'red')), '1h',
          no_value='0'),
 ]
@@ -349,7 +353,9 @@ panels += [
                 q(f'SELECT count("count") FROM "curlError" WHERE {NODE} AND $timeFilter '
                   'GROUP BY time($__interval) fill(0)', 'curl failures', 'B'),
                 q(f'SELECT count("count") FROM "speedtest-error" WHERE {NODE} AND $timeFilter '
-                  'GROUP BY time($__interval) fill(0)', 'speed test failures', 'C')],
+                  'GROUP BY time($__interval) fill(0)', 'speed test failures', 'C'),
+                q(f'SELECT count("count") FROM "dnsError" WHERE {NODE} AND $timeFilter '
+                  'GROUP BY time($__interval) fill(0)', 'dns failures', 'D')],
                {'x': 0, 'y': y, 'w': 12, 'h': 8}, 'none', overrides=color_overrides(FAILURE_COLORS),
                draw='bars', stack=True, interval='10m', legend_calcs=('sum',)),
     {
@@ -361,7 +367,9 @@ panels += [
                     q(f'SELECT count("count") AS "Curl" FROM "curlError" WHERE {NODE} AND $timeFilter '
                       'GROUP BY "computerTag"', '', 'B', 'table'),
                     q(f'SELECT count("count") AS "Speed test" FROM "speedtest-error" WHERE {NODE} AND $timeFilter '
-                      'GROUP BY "computerTag"', '', 'C', 'table')],
+                      'GROUP BY "computerTag"', '', 'C', 'table'),
+                    q(f'SELECT count("count") AS "DNS" FROM "dnsError" WHERE {NODE} AND $timeFilter '
+                      'GROUP BY "computerTag"', '', 'D', 'table')],
         'transformations': [{'id': 'merge', 'options': {}},
                             {'id': 'organize', 'options': {'excludeByName': {'Time': True},
                                                            'renameByName': {'computerTag': 'Node'},
@@ -412,12 +420,62 @@ panels += [
                     'legend': {'showLegend': True, 'displayMode': 'list', 'placement': 'bottom'},
                     'tooltip': {'mode': 'multi'}},
     },
-    timeseries('DNS lookup time per node', 'Average name-lookup time across URLs. Slow DNS makes everything '
-               'feel slow even when bandwidth is fine.',
+    timeseries('Name lookup time in curl per node', 'Average name-lookup time of the curl requests across '
+               'URLs. Slow DNS makes everything feel slow even when bandwidth is fine. The DNS row below '
+               'measures each resolver separately.',
                [q(f'SELECT mean("namelookup") * 1000 FROM "curl" WHERE {NODE} AND $timeFilter '
                   'GROUP BY time($__interval), "computerTag" fill(null)', '$tag_computerTag')],
                {'x': 12, 'y': y, 'w': 12, 'h': 8}, 'ms', overrides=node_ov),
 ]
+y += 8
+
+# ---------------------------------------------------------------- DNS
+# Resolver names and addresses come from each node's DNS_SERVERS setting (tag "resolver"), so nothing
+# about the network is fixed here.
+panels.append(row('DNS', y)); y += 1
+DNS_DESC = ('"system" is the node\'s normal resolver (what applications use); other resolvers come from the '
+            'node\'s DNS_SERVERS setting. "cached" asks for a name every resolver has cached, so it measures the '
+            'path to the resolver. "uncached" asks for a new random name, so a local resolver (for example a '
+            'Pi-hole or the router) must ask its upstream server; large public resolvers can still answer it '
+            'from cache.')
+per_dns = timeseries('DNS lookup time: $node', 'Time to answer each DNS query for one node. ' + DNS_DESC +
+                     ' Repeated for each selected node. Failed lookups are in the Reliability row.',
+                     [q('SELECT mean("queryTime") FROM "dns" WHERE "computerTag" =~ /^$node$/ AND $timeFilter '
+                        'GROUP BY time($__interval), "resolver", "query" fill(null)', '$tag_resolver · $tag_query')],
+                     {'x': 0, 'y': y, 'w': 8, 'h': 10}, 'ms')
+per_dns.update({'repeat': 'node', 'repeatDirection': 'h', 'maxPerRow': 3})
+panels.append(per_dns)
+y += 10
+dns_ov = [{'matcher': {'id': 'byRegexp', 'options': '(Median|p95|Max)'},
+           'properties': [{'id': 'unit', 'value': 'ms'}, {'id': 'decimals', 'value': 0},
+                          {'id': 'thresholds', 'value': steps('green', (100, 'orange'), (1000, 'red'))},
+                          {'id': 'custom.cellOptions', 'value': {'type': 'color-text'}}]},
+          {'matcher': {'id': 'byName', 'options': 'Failures'},
+           'properties': [{'id': 'noValue', 'value': '0'},
+                          {'id': 'thresholds', 'value': steps('green', (1, 'orange'), (10, 'red'))},
+                          {'id': 'custom.cellOptions', 'value': {'type': 'color-background', 'mode': 'basic'}}]}]
+panels.append({
+    'type': 'table', 'id': nid(), 'title': 'DNS per node and resolver', 'datasource': DS,
+    'description': 'DNS lookup times and failures in the selected time range. Median and p95 in ms: green under '
+                   '100, orange under 1000, red above. A p95 or max near 4000 ms means lookups that timed out once '
+                   'and were answered on the retry. ' + DNS_DESC,
+    'gridPos': {'x': 0, 'y': y, 'w': 24, 'h': 8},
+    'targets': [q('SELECT count("queryTime") AS "Answers", median("queryTime") AS "Median", '
+                  'percentile("queryTime", 95) AS "p95", max("queryTime") AS "Max" '
+                  f'FROM "dns" WHERE {NODE} AND $timeFilter GROUP BY "computerTag", "resolver", "query"',
+                  '', 'A', 'table'),
+                q(f'SELECT count("count") AS "Failures" FROM "dnsError" WHERE {NODE} AND $timeFilter '
+                  'GROUP BY "computerTag", "resolver", "query"', '', 'B', 'table')],
+    'transformations': [{'id': 'merge', 'options': {}},
+                        {'id': 'organize', 'options': {'excludeByName': {'Time': True},
+                                                       'renameByName': {'computerTag': 'Node', 'resolver': 'Resolver',
+                                                                        'query': 'Query'},
+                                                       'indexByName': {'computerTag': 0, 'resolver': 1, 'query': 2,
+                                                                       'Answers': 3, 'Median': 4, 'p95': 5, 'Max': 6,
+                                                                       'Failures': 7}}}],
+    'fieldConfig': {'defaults': {'custom': {'align': 'left'}}, 'overrides': dns_ov},
+    'options': {'showHeader': True, 'sortBy': [{'displayName': 'Node'}]},
+})
 y += 8
 
 # ---------------------------------------------------------------- Bandwidth

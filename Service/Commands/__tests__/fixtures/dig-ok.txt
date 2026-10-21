@@ -1,0 +1,26 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @192.0.2.1 google.com +tries=1 +time=2
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44570
+;; flags: qr rd ra; QUERY: 1, ANSWER: 6, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;google.com.			IN	A
+
+;; ANSWER SECTION:
+google.com.		194	IN	A	142.250.109.101
+google.com.		194	IN	A	142.250.109.138
+google.com.		194	IN	A	142.250.109.102
+google.com.		194	IN	A	142.250.109.113
+google.com.		194	IN	A	142.250.109.100
+google.com.		194	IN	A	142.250.109.139
+
+;; Query time: 0 msec
+;; SERVER: 192.0.2.1#53(192.0.2.1) (UDP)
+;; WHEN: Wed Oct 21 17:45:07 CEST 2026
+;; MSG SIZE  rcvd: 135
+

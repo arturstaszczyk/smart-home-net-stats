@@ -1,0 +1,21 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @1.1.1.1 smarthome-beea38b4.example.com +tries=1 +time=2
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 32718
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;smarthome-beea38b4.example.com.	IN	A
+
+;; AUTHORITY SECTION:
+example.com.		1800	IN	SOA	elliott.ns.cloudflare.com. dns.cloudflare.com. 2418004112 10000 2400 604800 1800
+
+;; Query time: 14 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Wed Oct 21 17:45:18 CEST 2026
+;; MSG SIZE  rcvd: 121
+

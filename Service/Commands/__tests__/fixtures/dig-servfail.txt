@@ -1,0 +1,19 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @1.1.1.1 dnssec-failed.org +tries=1 +time=2
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 59222
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; EDE: 9 (DNSKEY Missing): (no SEP matching the DS found for dnssec-failed.org.)
+;; QUESTION SECTION:
+;dnssec-failed.org.		IN	A
+
+;; Query time: 18 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Wed Oct 21 17:45:42 CEST 2026
+;; MSG SIZE  rcvd: 103
+

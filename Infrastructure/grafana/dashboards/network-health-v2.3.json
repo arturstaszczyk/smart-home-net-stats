@@ -1,0 +1,3980 @@
+{
+  "uid": "smart-home-network-v2-3",
+  "id": null,
+  "title": "Network health v2.3",
+  "description": "Per-node network health: latency, reachability, web response and bandwidth vs each node's expected speed.",
+  "tags": [
+    "smart-home",
+    "v2.3"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timezone": "",
+  "version": 1,
+  "links": [
+    {
+      "type": "link",
+      "title": "All nodes and targets",
+      "icon": "dashboard",
+      "keepTime": true,
+      "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=$__all&var-target=$__all",
+      "includeVars": false,
+      "asDropdown": false,
+      "targetBlank": false,
+      "tags": []
+    },
+    {
+      "type": "dashboards",
+      "tags": [
+        "smart-home"
+      ],
+      "asDropdown": false,
+      "title": "Dashboards",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "node",
+        "label": "Node",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "smart-home-influxdb"
+        },
+        "query": "SHOW TAG VALUES FROM \"ping\" WITH KEY = \"computerTag\"",
+        "multi": true,
+        "includeAll": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "type": "query",
+        "name": "target",
+        "label": "Ping target",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "smart-home-influxdb"
+        },
+        "query": "SHOW TAG VALUES FROM \"ping\" WITH KEY = \"address\" WHERE \"computerTag\" =~ /^$node$/",
+        "multi": true,
+        "includeAll": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 1,
+      "title": "Now",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Internet latency",
+      "description": "Average ping to internet targets (everything except private/LAN addresses) over the last 15 minutes. Green < 40 ms, orange < 100 ms, red above.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"avg\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" !~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Router latency",
+      "description": "Average ping to the router (private/LAN addresses) over the last 15 minutes. High values here point at the Pi's Wi-Fi or cable, not the ISP. Green < 10 ms, orange < 30 ms.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"avg\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" =~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Jitter",
+      "description": "Ping variation (mdev) to internet targets over the last 15 minutes. Hurts calls and gaming. Green < 10 ms, orange < 30 ms.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"mdev\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" !~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Packet loss",
+      "description": "Average share of lost ping packets over the last 15 minutes, all targets. Any loss is orange, 5 % or more red. A target that answers nothing at all is not here but under Failures (ping exits with an error instead).",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"packetsPercent\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "timeFrom": "15m"
+    },
+    {
+      "type": "gauge",
+      "id": 6,
+      "title": "Last download",
+      "description": "Most recent speed test per node (the value), with the last 24 hours of hourly tests as a sparkline. The full circle is 120 % of the node's expected speed. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"download\") FROM \"speedtest\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "shape": "circle",
+        "sparkline": true,
+        "barShape": "rounded",
+        "barWidthFactor": 0.5,
+        "endpointMarker": "point",
+        "textMode": "value_and_name",
+        "showThresholdMarkers": false,
+        "showThresholdLabels": false,
+        "sizing": "auto",
+        "segmentCount": 1,
+        "effects": {
+          "centerGlow": true,
+          "gradient": true,
+          "barGlow": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 500.0
+              },
+              {
+                "color": "green",
+                "value": 800.0
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1200,
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi113"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 25.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 40.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 60.0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi105"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 3.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 4.8
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 7.2
+              }
+            ]
+          }
+        ]
+      },
+      "timeFrom": "24h",
+      "interval": "1h"
+    },
+    {
+      "type": "gauge",
+      "id": 7,
+      "title": "Last upload",
+      "description": "Most recent speed test per node (the value), with the last 24 hours of hourly tests as a sparkline. The full circle is 120 % of the node's expected speed. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"upload\") FROM \"speedtest\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "shape": "circle",
+        "sparkline": true,
+        "barShape": "rounded",
+        "barWidthFactor": 0.5,
+        "endpointMarker": "point",
+        "textMode": "value_and_name",
+        "showThresholdMarkers": false,
+        "showThresholdLabels": false,
+        "sizing": "auto",
+        "segmentCount": 1,
+        "effects": {
+          "centerGlow": true,
+          "gradient": true,
+          "barGlow": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50.0
+              },
+              {
+                "color": "green",
+                "value": 80.0
+              }
+            ]
+          },
+          "min": 0,
+          "max": 120,
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi113"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 25.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 40.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 60.0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi105"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 9.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 14.4
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 21.6
+              }
+            ]
+          }
+        ]
+      },
+      "timeFrom": "24h",
+      "interval": "1h"
+    },
+    {
+      "type": "stat",
+      "id": 8,
+      "title": "Speed tests below expected",
+      "description": "How many speed tests in the selected time range measured download or upload below 80% of their node's expected speed, all selected nodes. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%. Details per node in the Bandwidth section.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"download\") FROM \"speedtest\" WHERE ((\"computerTag\" = 'pi113' AND \"download\" < 40) OR (\"computerTag\" = 'pi105' AND \"download\" < 4.8) OR (\"computerTag\" !~ /^(pi113|pi105)$/ AND \"download\" < 800)) AND \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "download"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"upload\") FROM \"speedtest\" WHERE ((\"computerTag\" = 'pi113' AND \"upload\" < 40) OR (\"computerTag\" = 'pi105' AND \"upload\" < 14.4) OR (\"computerTag\" !~ /^(pi113|pi105)$/ AND \"upload\" < 80)) AND \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "upload"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 9,
+      "title": "Failures (last hour)",
+      "description": "Commands that failed outright in the last hour, all selected nodes: ping with no reply at all, curl errors or timeouts (10 s), failed speed tests, and DNS lookups with no answer or a resolver error.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 6,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"count\") FROM \"pingError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "ping"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"count\") FROM \"curlError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "curl"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT count(\"count\") FROM \"speedtest-error\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "speed test"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "D",
+          "query": "SELECT count(\"count\") FROM \"dnsError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "dns"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "timeFrom": "1h"
+    },
+    {
+      "type": "table",
+      "id": 10,
+      "title": "Last report per node",
+      "description": "When each node last wrote a ping result (looks back 7 days, ignores the node filter), and how many curl results it wrote in the last 10 minutes (about 40 when healthy). 0 (red) means the node has stopped reporting.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 6
+      },
+      "timeFrom": "7d",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT last(\"avg\") AS \"Last ping\" FROM \"ping\" WHERE $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"total\") AS \"Reports in last 10 min\" FROM \"curl\" WHERE time > now() - 10m GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "computerTag",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time curl": true
+            },
+            "renameByName": {
+              "computerTag": "Node",
+              "Time ping": "Last report"
+            },
+            "indexByName": {
+              "computerTag": 0,
+              "Time ping": 1,
+              "Reports in last 10 min": 2
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last report"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last ping"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reports in last 10 min"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "0"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "green",
+                      "value": 30
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show only ${__value.raw}",
+                    "targetBlank": false,
+                    "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__value.raw}&${target:queryparam}&${__url_time_range}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "row",
+      "id": 11,
+      "title": "Latency",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 12,
+      "title": "Internet latency per node",
+      "description": "Average ping to internet targets. One line per node.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"avg\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" !~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "Router latency per node",
+      "description": "Average ping to the router. Compare with internet latency on the left: if both rise on one node, that node's Wi-Fi/LAN is the problem; if only internet rises everywhere, it is the ISP.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"avg\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" =~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "title": "Jitter per node",
+      "description": "Ping variation (mdev) to internet targets.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"mdev\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" !~ /^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\./ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 15,
+      "title": "Packet loss per node",
+      "description": "Share of lost ping packets per 15 minutes, all targets. Total outages are not here (ping fails instead); see the status grid below.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"packetsPercent\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "min": 0,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "15m"
+    },
+    {
+      "type": "timeseries",
+      "id": 16,
+      "title": "Latency by target: $node",
+      "description": "Average ping per target for one node. Repeated for each selected node.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 8,
+        "h": 11
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"avg\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" =~ /^$target$/ AND $timeFilter GROUP BY time($__interval), \"address\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_address"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only target ${__field.labels.address}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&${node:queryparam}&var-target=${__field.labels.address}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "google"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "wp\\.pl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "wikipedia"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "8\\.8\\.8\\.8"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(10|127|192\\.168|172\\.)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeat": "node",
+      "repeatDirection": "h",
+      "maxPerRow": 3
+    },
+    {
+      "type": "row",
+      "id": 17,
+      "title": "Reliability",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "status-history",
+      "id": 18,
+      "title": "Reachability by node and target: green no loss \u00b7 orange some loss \u00b7 red heavy loss \u00b7 dark red no reply",
+      "description": "Each cell is the worst packet loss in that time slice. Green: no loss. Orange: some loss. Red: half or more lost. Dark red \"no reply\": no ping result at all, because the target did not answer or the node itself stopped reporting. Cells are 5 minutes wide at 24 h, so any outage of 5 minutes or more is visible; shorter ones show under Failures over time.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 11
+      },
+      "interval": "2m",
+      "maxDataPoints": 288,
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT max(\"packetsPercent\") FROM \"ping\" WHERE \"computerTag\" =~ /^$node$/ AND \"address\" =~ /^$target$/ AND $timeFilter AND time < now() - 2m GROUP BY time($__interval), \"computerTag\", \"address\" fill(100)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag \u00b7 $tag_address"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 50
+              },
+              {
+                "color": "dark-red",
+                "value": 100
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "no loss",
+                  "color": "green",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0.01,
+                "to": 49.99,
+                "result": {
+                  "text": "some loss",
+                  "color": "orange",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 50,
+                "to": 99.99,
+                "result": {
+                  "text": "heavy loss",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "100": {
+                  "text": "no reply",
+                  "color": "dark-red",
+                  "index": 3
+                }
+              }
+            }
+          ],
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag} \u2192 ${__field.labels.address}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&var-target=${__field.labels.address}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "rowHeight": 0.85,
+        "colWidth": 0.95,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "title": "Failures over time",
+      "description": "Failed commands per time slice, all selected nodes.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"count\") FROM \"pingError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "ping failures"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"count\") FROM \"curlError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "curl failures"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT count(\"count\") FROM \"speedtest-error\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "speed test failures"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "D",
+          "query": "SELECT count(\"count\") FROM \"dnsError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval) fill(0)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "dns failures"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ping failures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "curl failures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "speed test failures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "dns failures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "interval": "10m"
+    },
+    {
+      "type": "table",
+      "id": 20,
+      "title": "Failures per node",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "description": "Failed commands per node in the selected time range. Nodes without failures are not listed.",
+      "gridPos": {
+        "x": 12,
+        "y": 59,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"count\") AS \"Ping\" FROM \"pingError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"count\") AS \"Curl\" FROM \"curlError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT count(\"count\") AS \"Speed test\" FROM \"speedtest-error\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "D",
+          "query": "SELECT count(\"count\") AS \"DNS\" FROM \"dnsError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "computerTag": "Node"
+            },
+            "indexByName": {
+              "computerTag": 0
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "color-text"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show only ${__value.raw}",
+                    "targetBlank": false,
+                    "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__value.raw}&${target:queryparam}&${__url_time_range}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "row",
+      "id": 21,
+      "title": "Web response (curl)",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 22,
+      "title": "Page load time by URL: $node",
+      "description": "Total time to fetch each URL (DNS + connect + TLS + server + transfer) for one node. Repeated for each selected node.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 8,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"total\") * 1000 FROM \"curl\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"address\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_address"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "google"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "wp\\.pl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "wikipedia"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "8\\.8\\.8\\.8"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(10|127|192\\.168|172\\.)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeat": "node",
+      "repeatDirection": "h",
+      "maxPerRow": 3
+    },
+    {
+      "type": "barchart",
+      "id": 23,
+      "title": "Where page-load time goes",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "description": "Average time per phase of fetching each URL, selected nodes and time range. DNS: name lookup. Connect: TCP. TLS: encryption handshake (\u22480 for plain HTTP). Server wait: until the first byte. Transfer: rest of the page. Needs service version with the extended curl timings.",
+      "gridPos": {
+        "x": 0,
+        "y": 78,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"namelookup\") * 1000 AS \"DNS\", (mean(\"connect\") - mean(\"namelookup\")) * 1000 AS \"Connect\", (mean(\"pretransfer\") - mean(\"connect\")) * 1000 AS \"TLS\", (mean(\"starttransfer\") - mean(\"pretransfer\")) * 1000 AS \"Server wait\", (mean(\"total\") - mean(\"starttransfer\")) * 1000 AS \"Transfer\" FROM \"curl\" WHERE \"computerTag\" =~ /^$node$/ AND \"connect\" > 0 AND $timeFilter GROUP BY \"address\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "address": 0
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "fixed"
+          },
+          "custom": {
+            "fillOpacity": 90,
+            "lineWidth": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DNS"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Connect"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TLS"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Server wait"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Transfer"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "stacking": "normal",
+        "xField": "address",
+        "showValue": "never",
+        "barWidth": 0.7,
+        "groupWidth": 0.7,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 24,
+      "title": "Name lookup time in curl per node",
+      "description": "Average name-lookup time of the curl requests across URLs. Slow DNS makes everything feel slow even when bandwidth is fine. The DNS row below measures each resolver separately.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 78,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"namelookup\") * 1000 FROM \"curl\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 25,
+      "title": "DNS",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 86,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 26,
+      "title": "DNS lookup time: $node",
+      "description": "Time to answer each DNS query for one node. \"system\" is the node's normal resolver (what applications use); other resolvers come from the node's DNS_SERVERS setting. \"cached\" asks for a name every resolver has cached, so it measures the path to the resolver. \"uncached\" asks for a new random name, so a local resolver (for example a Pi-hole or the router) must ask its upstream server; large public resolvers can still answer it from cache. Repeated for each selected node. Failed lookups are in the Reliability row.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 87,
+        "w": 8,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"queryTime\") FROM \"dns\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"resolver\", \"query\" fill(null)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_resolver \u00b7 $tag_query"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeat": "node",
+      "repeatDirection": "h",
+      "maxPerRow": 3
+    },
+    {
+      "type": "table",
+      "id": 27,
+      "title": "DNS per node and resolver",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "description": "DNS lookup times and failures in the selected time range. Median and p95 in ms: green under 100, orange under 1000, red above. A p95 or max near 4000 ms means lookups that timed out once and were answered on the retry. \"system\" is the node's normal resolver (what applications use); other resolvers come from the node's DNS_SERVERS setting. \"cached\" asks for a name every resolver has cached, so it measures the path to the resolver. \"uncached\" asks for a new random name, so a local resolver (for example a Pi-hole or the router) must ask its upstream server; large public resolvers can still answer it from cache.",
+      "gridPos": {
+        "x": 0,
+        "y": 97,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"queryTime\") AS \"Answers\", median(\"queryTime\") AS \"Median\", percentile(\"queryTime\", 95) AS \"p95\", max(\"queryTime\") AS \"Max\" FROM \"dns\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\", \"resolver\", \"query\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"count\") AS \"Failures\" FROM \"dnsError\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\", \"resolver\", \"query\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "computerTag": "Node",
+              "resolver": "Resolver",
+              "query": "Query"
+            },
+            "indexByName": {
+              "computerTag": 0,
+              "resolver": 1,
+              "query": 2,
+              "Answers": 3,
+              "Median": 4,
+              "p95": 5,
+              "Max": 6,
+              "Failures": 7
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(Median|p95|Max)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 100
+                    },
+                    {
+                      "color": "red",
+                      "value": 1000
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failures"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "0"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 10
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show only ${__value.raw}",
+                    "targetBlank": false,
+                    "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__value.raw}&${target:queryparam}&${__url_time_range}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Node"
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "id": 28,
+      "title": "Bandwidth (speed test)",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 105,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 29,
+      "title": "Download, % of expected per node",
+      "description": "Speed test results (hourly) as a share of each node's expected download speed, so all nodes compare on one scale. Orange band: below 80%. Red band: below 50%. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 106,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"download\") / 50 * 100 FROM \"speedtest\" WHERE \"computerTag\" = 'pi113' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT mean(\"download\") / 6 * 100 FROM \"speedtest\" WHERE \"computerTag\" = 'pi105' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT mean(\"download\") / 1000 * 100 FROM \"speedtest\" WHERE \"computerTag\" !~ /^(pi113|pi105)$/ AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            },
+            "axisSoftMin": 0,
+            "axisSoftMax": 110
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50.0
+              },
+              {
+                "color": "transparent",
+                "value": 80.0
+              }
+            ]
+          },
+          "min": 0,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 30,
+      "title": "Upload, % of expected per node",
+      "description": "Speed test results (hourly) as a share of each node's expected upload speed, so all nodes compare on one scale. Orange band: below 80%. Red band: below 50%. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 106,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"upload\") / 50 * 100 FROM \"speedtest\" WHERE \"computerTag\" = 'pi113' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT mean(\"upload\") / 18 * 100 FROM \"speedtest\" WHERE \"computerTag\" = 'pi105' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT mean(\"upload\") / 100 * 100 FROM \"speedtest\" WHERE \"computerTag\" !~ /^(pi113|pi105)$/ AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            },
+            "axisSoftMin": 0,
+            "axisSoftMax": 110
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50.0
+              },
+              {
+                "color": "transparent",
+                "value": 80.0
+              }
+            ]
+          },
+          "min": 0,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 31,
+      "title": "Download per node",
+      "description": "Speed test results (hourly) in Mbit/s. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 115,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"download\") FROM \"speedtest\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "min": 0,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 32,
+      "title": "Upload per node",
+      "description": "Speed test results (hourly) in Mbit/s. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 115,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"upload\") FROM \"speedtest\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "min": 0,
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "id": 33,
+      "title": "Speed vs expected per node",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "description": "Speed test summary for the selected time range. DL = download, UL = upload. \"expected\" and \"last\" are Mbit/s; \"avg %\" and \"min %\" are a share of the node's expected speed; \"below\" counts tests under 80% of it. Each node is judged against its own expected speed: pi113 50/50, pi105 6/18, every other node 1000/100 Mbit/s (download/upload). Orange below 80% of it, red below 50%.",
+      "gridPos": {
+        "x": 0,
+        "y": 123,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT count(\"download\") AS \"Tests\", 50 + 0 * last(\"download\") AS \"DL expected\", last(\"download\") AS \"DL last\", mean(\"download\") / 50 * 100 AS \"DL avg %\", min(\"download\") / 50 * 100 AS \"DL min %\", 50 + 0 * last(\"upload\") AS \"UL expected\", last(\"upload\") AS \"UL last\", mean(\"upload\") / 50 * 100 AS \"UL avg %\", min(\"upload\") / 50 * 100 AS \"UL min %\" FROM \"speedtest\" WHERE \"computerTag\" = 'pi113' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "B",
+          "query": "SELECT count(\"download\") AS \"Tests\", 6 + 0 * last(\"download\") AS \"DL expected\", last(\"download\") AS \"DL last\", mean(\"download\") / 6 * 100 AS \"DL avg %\", min(\"download\") / 6 * 100 AS \"DL min %\", 18 + 0 * last(\"upload\") AS \"UL expected\", last(\"upload\") AS \"UL last\", mean(\"upload\") / 18 * 100 AS \"UL avg %\", min(\"upload\") / 18 * 100 AS \"UL min %\" FROM \"speedtest\" WHERE \"computerTag\" = 'pi105' AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "C",
+          "query": "SELECT count(\"download\") AS \"Tests\", 1000 + 0 * last(\"download\") AS \"DL expected\", last(\"download\") AS \"DL last\", mean(\"download\") / 1000 * 100 AS \"DL avg %\", min(\"download\") / 1000 * 100 AS \"DL min %\", 100 + 0 * last(\"upload\") AS \"UL expected\", last(\"upload\") AS \"UL last\", mean(\"upload\") / 100 * 100 AS \"UL avg %\", min(\"upload\") / 100 * 100 AS \"UL min %\" FROM \"speedtest\" WHERE \"computerTag\" !~ /^(pi113|pi105)$/ AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "D",
+          "query": "SELECT count(\"download\") AS \"DL below\" FROM \"speedtest\" WHERE ((\"computerTag\" = 'pi113' AND \"download\" < 40) OR (\"computerTag\" = 'pi105' AND \"download\" < 4.8) OR (\"computerTag\" !~ /^(pi113|pi105)$/ AND \"download\" < 800)) AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "E",
+          "query": "SELECT count(\"upload\") AS \"UL below\" FROM \"speedtest\" WHERE ((\"computerTag\" = 'pi113' AND \"upload\" < 40) OR (\"computerTag\" = 'pi105' AND \"upload\" < 14.4) OR (\"computerTag\" !~ /^(pi113|pi105)$/ AND \"upload\" < 80)) AND \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY \"computerTag\"",
+          "rawQuery": true,
+          "resultFormat": "table",
+          "alias": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "computerTag": "Node"
+            },
+            "indexByName": {
+              "computerTag": 0,
+              "Tests": 1,
+              "DL expected": 2,
+              "DL last": 3,
+              "DL avg %": 4,
+              "DL min %": 5,
+              "DL below": 6,
+              "UL expected": 7,
+              "UL last": 8,
+              "UL avg %": 9,
+              "UL min %": 10,
+              "UL below": 11
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "minWidth": 70
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DL avg %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 80.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DL min %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 80.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UL avg %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 80.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UL min %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 80.0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(DL|UL) (expected|last)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "Mbits"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(DL|UL) below"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "0"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 3
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show only ${__value.raw}",
+                    "targetBlank": false,
+                    "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__value.raw}&${target:queryparam}&${__url_time_range}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 34,
+      "title": "Speed test ping per node",
+      "description": "Latency measured by the speed test itself, to its test server. Needs service version with the extended speed test parsing.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "smart-home-influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 129,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "smart-home-influxdb"
+          },
+          "refId": "A",
+          "query": "SELECT mean(\"ping\") FROM \"speedtest\" WHERE \"computerTag\" =~ /^$node$/ AND $timeFilter GROUP BY time($__interval), \"computerTag\" fill(none)",
+          "rawQuery": true,
+          "resultFormat": "time_series",
+          "alias": "$tag_computerTag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisSoftMin": 0
+          },
+          "links": [
+            {
+              "title": "Show only ${__field.labels.computerTag}",
+              "targetBlank": false,
+              "url": "/d/smart-home-network-v2-3/?orgId=1&var-node=${__field.labels.computerTag}&${target:queryparam}&${__url_time_range}"
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pi5"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+;; communications error to 192.0.2.53#53: timed out
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> @192.0.2.53 google.com +tries=1 +time=2
+; (1 server found)
+;; global options: +cmd
+;; no servers could be reached
