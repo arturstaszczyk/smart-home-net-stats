@@ -29,6 +29,20 @@ test('normalises comma decimals', () => {
     assert.deepEqual(curl.parseOutput(output), curl.parseOutput(fixture('curl-https.txt')))
 })
 
-test('omits timings it cannot find', { todo: 'returns null fields today (plan, Phase 3 #5)' }, () => {
+test('omits timings it cannot find', () => {
     assert.deepEqual(curl.parseOutput('curl: (6) Could not resolve host'), {})
+})
+
+test('keeps the timings it finds when output is partial', () => {
+    const output = fixture('curl-https.txt')
+        .split('\n')
+        .filter((line) => !line.includes('time_appconnect') && !line.includes('time_total'))
+        .join('\n')
+
+    assert.deepEqual(curl.parseOutput(output), {
+        namelookup: '0.007922',
+        connect: '0.020321',
+        pretransfer: '0.061840',
+        starttransfer: '0.119171',
+    })
 })
