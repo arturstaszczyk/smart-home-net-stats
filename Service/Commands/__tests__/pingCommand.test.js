@@ -29,10 +29,17 @@ test('normalises a comma decimal in the loss percentage', () => {
     assert.equal(ping.parseOutput(output).packetsPercent, '16.6667')
 })
 
-test('normalises comma decimals in round-trip times', { todo: 'only the loss percentage is normalised today' }, () => {
+test('normalises comma decimals in round-trip times', () => {
     const output = fixture('ping-ok.txt').replace('9.028/10.783/14.007/2.247', '9,028/10,783/14,007/2,247')
 
-    assert.equal(ping.parseOutput(output).avg, '10.783')
+    const { min, avg, max, mdev } = ping.parseOutput(output)
+
+    assert.deepEqual({ min, avg, max, mdev }, {
+        min: '9.028',
+        avg: '10.783',
+        max: '14.007',
+        mdev: '2.247',
+    })
 })
 
 test('returns no fields for output it does not recognise', () => {

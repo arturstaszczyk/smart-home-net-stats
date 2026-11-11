@@ -18,12 +18,12 @@ export default class PingCommand extends BaseCommand {
 
             if (packetsSent && packetsPercent) {
                 pingStats.packetsSent = packetsSent[0]
-                pingStats.packetsPercent = packetsPercent[1].replace(',', '.')
+                pingStats.packetsPercent = packetsPercent[1].replace(/,/g, '.')
             }
 
             let stats = item.match(/([0-9]+.[0-9]+\/){3}[0-9]+.[0-9]+/)
             if (stats) {
-                stats = stats[0].split('/')
+                stats = stats[0].split('/').map((value) => value.replace(/,/g, '.'))
 
                 pingStats['min'] = stats[0]
                 pingStats['avg'] = stats[1]
