@@ -45,7 +45,7 @@ export default class SpeedTestCommand extends BaseCommand {
         const computerTag = options.computerTag || 'UNKNOWN'
 
         console.log(`Starting ${commandName} command on ${computerTag}`)
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
 
             let metricName = ''
             const metrics = {}
@@ -64,14 +64,7 @@ export default class SpeedTestCommand extends BaseCommand {
                     _.assign(tags, { error: 'error' })
                     _.assign(metrics, { count: '1' })
                 },
-                onClose: (error) => {
-                    const speedResults = { metricName, metrics, tags }
-                    if (error) {
-                        reject(speedResults)
-                    } else {
-                        resolve(speedResults)
-                    }
-                }
+                onClose: () => resolve({ metricName, metrics, tags })
             }, {
                 timeout: 100000
             })

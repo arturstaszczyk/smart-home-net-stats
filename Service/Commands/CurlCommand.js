@@ -29,7 +29,7 @@ export default class CurlCommand extends BaseCommand {
         const commandName = 'CURL'
         console.log(`Command ${commandName}: '${address}'`)
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
 
             const tags = { address, computerTag }
             const metrics = {}
@@ -50,15 +50,7 @@ export default class CurlCommand extends BaseCommand {
 
                     console.log(`${commandName} error for address ${address}`)
                 },
-                onClose: (error) => {
-                    const curlResults = { metricName, metrics, tags }
-
-                    if (error) {
-                        reject(curlResults)
-                    } else {
-                        resolve(curlResults)
-                    }
-                }
+                onClose: () => resolve({ metricName, metrics, tags })
             })
 
         })

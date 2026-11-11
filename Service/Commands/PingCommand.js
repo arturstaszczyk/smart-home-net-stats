@@ -43,7 +43,7 @@ export default class PingCommand extends BaseCommand {
 
         console.log(`Command ${commandName}: '${address}' ${pingCount} times`)
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
 
             const tags = { address, computerTag }
             const metrics = {}
@@ -66,14 +66,7 @@ export default class PingCommand extends BaseCommand {
                     _.assign(tags, { error:  'error' })
                     _.assign(metrics, { count: '1' })
                 },
-                onClose: (errorCode) => {
-                    const pingResults = { metricName, metrics, tags }
-                    if(errorCode) {
-                        reject(pingResults)
-                    } else { 
-                        resolve(pingResults)
-                    }
-                }
+                onClose: () => resolve({ metricName, metrics, tags })
             })
         })
     }

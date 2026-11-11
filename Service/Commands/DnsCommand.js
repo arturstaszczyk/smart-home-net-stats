@@ -57,7 +57,7 @@ export default class DnsCommand extends BaseCommand {
 
         console.log(`Command ${commandName}: ${resolver} (${options.server || 'system resolver'}), ${query}`)
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
 
             const tags = { resolver, query, computerTag }
             const metrics = {}
@@ -86,14 +86,7 @@ export default class DnsCommand extends BaseCommand {
                 },
                 // dig exits non-zero (9) when no server replied at all
                 onError: () => fail('no reply'),
-                onClose: (error) => {
-                    const dnsResults = { metricName, metrics, tags }
-                    if (error) {
-                        reject(dnsResults)
-                    } else {
-                        resolve(dnsResults)
-                    }
-                }
+                onClose: () => resolve({ metricName, metrics, tags })
             }, {
                 timeout: 10000
             })
