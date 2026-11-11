@@ -8,7 +8,7 @@ import DataUsedCommand from './Commands/DataUsedCommand.js'
 import SpeedTestCommand from './Commands/SpeedTestCommand.js'
 import DnsCommand, { parseDnsServers } from './Commands/DnsCommand.js'
 
-import InfluxWriter from './Influx/influxWriter.js'
+import InfluxWriter, { writeResults } from './Influx/influxWriter.js'
 
 const DEFAULT_PING_COUNT = 6
 
@@ -78,9 +78,8 @@ const runCommands = async (commands) => {
 
     console.log('--ALL COMMANDS EXECUTED')
 
-    _.forEach(outputs, (singleCommandOutput) => {
-        influxWriter.storeMetrics(singleCommandOutput.metricName, singleCommandOutput.tags, singleCommandOutput.metrics)
-    })
+    // One request for the whole batch; a failed write is logged, never thrown.
+    await writeResults(influxWriter, outputs)
 }
 
 console.log('================= STARTING ================')
@@ -88,7 +87,7 @@ const now = new Date()
 console.log(now.toString())
 
 if (_.includes(process.argv, 'infrequent')) {
-    runCommands(infrequentCommands)
+    await runCommands(infrequentCommands)
 } else if (_.includes(process.argv, 'frequent')) {
-    runCommands(frequentCommands)
+    await runCommands(frequentCommands)
 }
