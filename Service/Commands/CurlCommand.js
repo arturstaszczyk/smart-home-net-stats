@@ -14,7 +14,9 @@ export default class CurlCommand extends BaseCommand {
         const curlStats = {}
         _.forEach(timings, (timing) => {
             const match = stdout.match(new RegExp(`time_${timing}:\\s+([0-9]+[.,][0-9]+)`))
-            curlStats[timing] = match && match[1].replace(',', '.')
+            if (match) {
+                curlStats[timing] = match[1].replace(',', '.')
+            }
         })
 
         return curlStats
