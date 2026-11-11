@@ -25,6 +25,24 @@ test('treats a missing previous reading as 0', () => {
     assert.equal(stats.diffDownloaded, 313613676)
 })
 
-test('does not throw on output it does not recognise', { todo: 'throws a TypeError today (plan, Phase 3 #1)' }, () => {
-    assert.doesNotThrow(() => dataUsed.parseOutput('wlan0: error fetching interface information: Device not found', {}))
+test('does not throw on output it does not recognise', () => {
+    let stats
+    assert.doesNotThrow(() => {
+        stats = dataUsed.parseOutput('wlan0: error fetching interface information: Device not found', {})
+    })
+    assert.deepEqual(stats, {})
+})
+
+test('keeps only the counters it finds when one of RX/TX is missing', () => {
+    const rxOnly = fixture('ifconfig-lo.txt')
+        .split('\n')
+        .filter((line) => !line.includes('TX packets'))
+        .join('\n')
+
+    const stats = dataUsed.parseOutput(rxOnly, { oldDownloadBytes: 313600000 })
+
+    assert.deepEqual(stats, {
+        downloadBytes: '313613676',
+        diffDownloaded: 13676,
+    })
 })
