@@ -1,13 +1,22 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-10-14):** Phase 1 ✅ done · Phase 5 ✅ done (without CI) · Dashboard v2.0 ✅ done (`dashboard-v2`) · Dashboard v2.1 ✅ per-node expected speeds · Dashboard v2.2 ✅ gauges and click-to-filter · DNS checks + dashboard v2.3 ✅ (uncommitted) · Grafana 13.2.4 ✅ (fresh install, 2026-10-19) · Ookla speed test ✅ done, verified on amd64 (`ookla-speedtest`) · Phase 2 🔀 mostly done (`ookla-speedtest`) · Phases 3–4 ⏳ not started.
+> **Status (2026-11-11, checked against `main` at `633831f`):** Phase 1 ✅ · Phase 5 ✅ (without CI) · Phase 2 🔀 done except `influxWriter.test.js` (blocked on Phase 3 #7) · Ookla speed test ✅ · DNS checks ✅ · Dashboards v2.0–v2.3 ✅ · Grafana 13.2.4 ✅ · **Phase 3 ⏳ not started (next)** · Phase 4 ⏳ not started.
 >
-> | Phase | Commit | Branch |
-> | --- | --- | --- |
-> | 1 — Runtime foundation | `d54e90c` | `phase-1-esm` |
-> | 5 — Ops & deployment | `1321bc7` | `phase-5-infra` (on top of `phase-1-esm`) |
+> Everything is committed, merged into `main` and pushed: `main` equals `origin/main`, the working tree is clean, `yarn lint` is clean and `yarn test` gives 33 tests, 30 pass, 0 fail, 3 `todo`. The local branches `phase-1-esm`, `phase-5-infra`, `ookla-speedtest` and `dashboard-v2` are fully merged and can be deleted.
 >
-> Neither branch is merged into `main` or pushed yet.
+> | Work | Commit |
+> | --- | --- |
+> | Phase 1 — Runtime foundation | `d54e90c` |
+> | Phase 5 — Ops & deployment | `1321bc7` |
+> | Dashboard v2.0 + extended measurements | `1900b40` |
+> | Ookla speed test | `a09e8ef` |
+> | Phase 2 — Unit tests | `31b41c5` |
+> | Dashboard v2.1 (per-node speeds) | `23e7dfd` |
+> | Grafana 12.0.2 → 13.2.4 | `66ecf50` |
+> | Dashboard v2.2 (gauges, click-to-filter) | `1be807c` |
+> | DNS checks + dashboard v2.3 | `633831f` |
+>
+> A visual version of this plan is in `docs/IMPROVEMENT_PLAN.html`. This Markdown file stays the source of truth; update the HTML when the status here changes.
 >
 > Phase 5 was done before 2–4 at the user's request, so the service image still runs cron until Phase 4 replaces it.
 > The session copy at `~/.claude/plans/goofy-popping-goose.md` is the pre-implementation plan and is out of date; this file is the source of truth.
@@ -21,7 +30,7 @@
 > - **Infrastructure and Service are separate deployments**, each with its own `docker-compose.yml` and `.env`. The infrastructure host runs InfluxDB + Grafana only; the service runs only on the measuring Pis.
 > - InfluxDB port 8086 stays reachable on the LAN (the Pis need it), with **authentication enabled**.
 >
-> Remaining order: tests (2), then the correctness fixes they cover (3), then the refactor (4). Don't refactor before Phase 2 lands.
+> Remaining order: the correctness fixes the tests cover (3), then the refactor (4). Phase 2 has landed, so Phase 3 can start. Suggested order inside Phase 3: #3 + #7 (Influx writes, then `influxWriter.test.js`), then #1 + #2 + #9 + #4 (one `BaseCommand` rewrite), then the small parser fixes #5, #10, #11, then #8.
 
 ## Context
 
@@ -56,7 +65,7 @@ Commit `d54e90c`. No behaviour change. Verified: `yarn lint` clean, every module
 
 ## Phase 2 — Tests 🔀 (mostly done)
 
-Done 2026-10-14 on `ookla-speedtest`, uncommitted: `yarn test` runs 23 tests, 20 pass and 3 are `todo` for known Phase 3 bugs. Verified that a deliberately broken bandwidth conversion makes the suite fail with exit code 1.
+Done 2026-10-14, commit `31b41c5` (merged into `main`). `yarn test` first ran 23 tests; with the 10 DNS tests added later it runs 33: 30 pass and 3 are `todo` for known Phase 3 bugs (`curlCommand`, `dataUsedCommand`, `pingCommand`). Verified that a deliberately broken bandwidth conversion makes the suite fail with exit code 1.
 
 - ✅ `node:test` + `node:assert`, `"test": "node --test"`, zero new dependencies. Tests are excluded from the Docker image (`.dockerignore`).
 - ✅ Real fixtures in `Service/Commands/__tests__/fixtures/` (ping ok/unreachable, curl HTTPS/plain HTTP, ifconfig `lo`, an Ookla JSON result), with network-identifying values scrubbed; how each was captured is in its README. Comma-decimal variants are derived in the tests.
@@ -77,6 +86,8 @@ Use the built-in `node:test` runner and `node:assert`, so there are zero new dep
 - ⏳ Extend the README's **Test** section: `yarn test`, how to run a single file (`node --test Commands/__tests__/pingCommand.test.js`), where the fixtures live and how to capture a new one from real CLI output, and a note that the no-match tests fail on purpose until Phase 3.
 
 ## Phase 3 — Correctness fixes ⏳ (11 items: 1 done early, 2 partly)
+
+Not started. Re-checked against the code on 2026-11-11: `index.js` still calls `storeMetrics` without awaiting and never closes the writer, `BaseCommand._execute` is unchanged, and `InfluxWriter` still reads `process.env` at module scope. Items #1–#5 and #7–#11 are all still open; #6 and half of #5 and #8 are done.
 
 Each of these is a real defect, not a style preference:
 
@@ -132,7 +143,7 @@ Commit `1321bc7`. Verified end to end on 2026-10-14; see Verification below.
 
 ## Dashboard v2.0 ✅ (not in the original plan)
 
-Done 2026-10-14 at the user's request, committed as `1900b40` on `dashboard-v2`. The original dashboard is kept as **v1.0**.
+Done 2026-10-14 at the user's request, committed as `1900b40` (branch `dashboard-v2`, merged into `main`). The original dashboard is kept as **v1.0**.
 
 - ✅ **Service: more measurements.** `CurlCommand.parseOutput` now stores all cumulative curl timings (`namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`; previously only the first and last), and `SpeedTestCommand.parseOutput` stores the speed test's `ping`. Existing field names are unchanged, so v1.0 is unaffected. Same parsing pattern as before, including comma decimals; the Phase 3 `null`-field fix applies to the new fields too.
 - ✅ **v1.0** (`ping-all-sensors-v1.0.json`, uid `1ojbtE-Mz`): renamed file, title `… v1.0`, tags `smart-home`/`v1.0`, header link to the other `smart-home` dashboards. Panels unchanged.
@@ -144,7 +155,7 @@ Done 2026-10-14 at the user's request, committed as `1900b40` on `dashboard-v2`.
 
 ## Dashboard v2.1 ✅ (not in the original plan)
 
-Done 2026-10-19 at the user's request, uncommitted. Prompted by the first 24 h of real data: the plan thresholds (1000/100 −10 %) made the dashboard red for nodes that can never reach them. `pi105` is a deliberate worst-case canary in poor radio coverage; `pi113` is a Pi 3B on 2.4 GHz Wi-Fi, whose hardware ceiling is ~40–60 Mbit/s.
+Done 2026-10-19 at the user's request, commit `23e7dfd`. Prompted by the first 24 h of real data: the plan thresholds (1000/100 −10 %) made the dashboard red for nodes that can never reach them. `pi105` is a deliberate worst-case canary in poor radio coverage; `pi113` is a Pi 3B on 2.4 GHz Wi-Fi, whose hardware ceiling is ~40–60 Mbit/s.
 
 - ✅ **Per-node expected speeds** in the generator: `PLAN` (1000/100, the default for `server-101` and every new node), `NODE_EXPECTED` (`pi113` 50/50, `pi105` 6/18 = its usual level) and `WARN_BELOW`/`CRIT_BELOW` (orange below 80 %, red below 50 % of the node's own expectation, as the user asked).
 - ✅ Speed tiles use per-node threshold overrides; "Speed tests below expected" and the table counts use one query with an OR of per-node conditions; new "% of expected" charts divide each node by its own expectation in the query, so all nodes share one scale and one set of bands. Raw Mbit/s charts stay. The table was cut to 12 short DL/UL columns so it fits at full width.
@@ -153,7 +164,7 @@ Done 2026-10-19 at the user's request, uncommitted. Prompted by the first 24 h o
 
 ## Ookla speed test ✅ (not in the original plan)
 
-Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtest`. Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
+Done 2026-10-14 at the user's request, committed as `a09e8ef` (branch `ookla-speedtest`, merged into `main`). Replaces sivel's `speedtest-cli`, which measured about 700 Mbit/s where Ookla's official CLI measured 883 on the same gigabit line and machine.
 
 - ✅ `Service/Dockerfile.service`: Debian `speedtest-cli` (and the Python it pulled in) removed; Ookla CLI 1.2.0 downloaded per architecture (amd64, arm64, armhf) and verified against a pinned SHA-256.
 - ✅ `SpeedTestCommand`: runs `speedtest --accept-license --accept-gdpr --format=json --progress=no` (plus `--server-id` when `SPEED_TEST_SERVER_ID` is set; only digits are passed to the shell). Parses JSON; `download`/`upload` converted from bytes/s to Mbit/s and `ping` kept, so both dashboards work unchanged. New fields: `jitter`, `packetLoss`, `downloadLatency`, `uploadLatency` (loaded latency), `serverId`. Missing values are omitted instead of written as `null`; non-JSON output logs and writes no fields.
@@ -166,7 +177,7 @@ Done 2026-10-14 at the user's request, committed as `a09e8ef` on `ookla-speedtes
 
 ## DNS checks and dashboard v2.3 ✅ (not in the original plan)
 
-Done 2026-10-21 with the user's explicit approval, on the condition that nothing depends on (hard-codes) the network layout; uncommitted. Motivation: occasional 4 s DNS lookups on every node (mostly pi105) and ping failures to host names, while the one existing DNS number (curl's name lookup) can't show which hop is slow. The path is node → router → Pi-hole → upstream; the router forwards to the Pi-hole, which sees almost all queries as coming from the router.
+Done 2026-10-21 with the user's explicit approval, on the condition that nothing depends on (hard-codes) the network layout; commit `633831f`. Motivation: occasional 4 s DNS lookups on every node (mostly pi105) and ping failures to host names, while the one existing DNS number (curl's name lookup) can't show which hop is slow. The path is node → router → Pi-hole → upstream; the router forwards to the Pi-hole, which sees almost all queries as coming from the router.
 
 - ✅ **`DnsCommand`** (frequent batch): `dig [@server] <name> +tries=1 +time=2` against the node's normal resolver ("system") and each resolver in **`DNS_SERVERS`** (`name=address` pairs; unsafe entries skipped). Two queries each: "cached" (`DNS_CACHED_NAME`, default `google.com`) and "uncached" (a random name under `DNS_UNCACHED_DOMAIN`, default `example.com`). Success is decided from dig's `status:` line, because dig exits 0 for SERVFAIL. Writes `dns` (`queryTime` ms; tags `resolver`, `query`) or `dnsError` (`error` = `no reply` or the lower-case status). No addresses in code; the template shows only a generic example.
 - ✅ Dockerfile installs `dnsutils`; compose passes the three settings.
@@ -177,7 +188,7 @@ Done 2026-10-21 with the user's explicit approval, on the condition that nothing
 
 ## Dashboard v2.2 ✅ (not in the original plan)
 
-Done 2026-10-19 at the user's request, after the Grafana 13.2.4 upgrade; uncommitted. Uses the Grafana 13 features that fit this dashboard.
+Done 2026-10-19 at the user's request, after the Grafana 13.2.4 upgrade; commit `1be807c`. Uses the Grafana 13 features that fit this dashboard.
 
 - ✅ **Speed tiles are circular gauges** (Grafana 13 gauge: `shape: circle`, sparkline, rounded bars, centre glow): the value is the last test, the sparkline the last 24 h of hourly tests, and the full circle 120 % of the node's own expected speed (per-node `max` and thresholds). The row is taller (7 grid units) so four gauges stay readable; Grafana lays them out 2×2.
 - 🔀 **Click to filter, with data links instead of native cross-filtering.** Grafana 13.2's cross-filtering needs "Group by" for status history and time series, and only Prometheus and Loki support Group by; it is also not documented to apply to raw InfluxQL queries (the InfluxDB plugin is no longer in Grafana's main repository, so this couldn't be confirmed in source). Data links reach the same goal through the dashboard's own `$node`/`$target` variables: "Show only <node>" on every per-node tile, gauge, line and table Node column; node and target on the reachability grid; target on *Latency by target*. Curl panels get no target link (their addresses are URLs, not ping targets). A dashboard link "All nodes and targets" resets the filters.
@@ -186,7 +197,7 @@ Done 2026-10-19 at the user's request, after the Grafana 13.2.4 upgrade; uncommi
 
 ## Grafana upgrade 12.0.2 → 13.2.4 ✅
 
-Done 2026-10-19 as a fresh install, following the steps below. Results:
+Done 2026-10-19 as a fresh install, commit `66ecf50`, following the steps below. Results:
 
 - ✅ Grafana 13.2.4 started on an empty data folder; the old one is kept as `/var/lib/smart-home/grafana.old-12.0.2` (step 6: delete after a few days without problems). Downtime was about a minute.
 - ✅ All checks passed: version 13.2.4 and database `ok`; datasource `OK` (6 measurements); exactly the three provisioned dashboards; no provisioning errors; **anonymous Admin access still works** (HTTP 200 on folder creation; the "upgrade-check" folder was deleted again), still logged as deprecated; v2.1 and v1.0 render with no plugin or Angular errors.
@@ -318,7 +329,7 @@ Phase 5 checks, run on 2026-10-14 with separate compose project names and data d
 
 Still to run, for later phases:
 
-- ⏳ `cd Service && yarn install && yarn lint && yarn test`, with all tests green (Phase 2).
+- ✅ `cd Service && yarn install && yarn lint && yarn test`, with all tests green (Phase 2). Re-run 2026-11-11: lint clean, 33 tests, 30 pass, 3 `todo`, 0 fail.
 - ⏳ Error paths, which are the point of Phase 3: run with `PING_TARGETS=no-such-host.invalid` (Phase 4 adds that variable) and confirm the process does **not** crash, a `pingError` point is written, and the other commands in the batch still complete. Also confirm that a wrong `INFLUX_PASS` logs a write error without crashing.
 - ⏳ One-shot CLI mode against the Influx stack after the Phase 4 scheduler lands (`node ./index.js frequent` / `infrequent`). Then let the scheduler run ~3 minutes and confirm from `docker compose logs -f` that `frequent` fires each minute and `infrequent` fires once at `$SPEED_TEST_MINUTE`.
 - ⏳ After Phase 4, diff the measurement and field names again. They must be byte-identical, or the dashboard silently goes blank.

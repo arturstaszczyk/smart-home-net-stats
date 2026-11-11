@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>smart-home-net-stats: improvement plan</title>
+<style>
+  :root {
+    --c-fg: var(--foreground, #1b1f24);
+    --c-muted: var(--muted-foreground, #6a737d);
+    --c-card: var(--card, #f6f8fa);
+    --c-border: var(--border, #d0d7de);
+    --c-ok: var(--success, #1a7f37);
+    --c-warn: var(--warning, #b7791f);
+    --c-bad: var(--destructive, #cf222e);
+    --c-info: var(--info, #0969da);
+    --c-code: var(--code-background, #eaeef2);
+    --r: var(--radius, 8px);
+  }
+  * { box-sizing: border-box; }
+  body { font-family: var(--font-sans, system-ui, sans-serif); color: var(--c-fg); line-height: 1.45; font-size: 14px; max-width: 1100px; margin: 0 auto; padding: 8px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--c-border); }
+  h3 { font-size: 14px; margin: 0 0 6px; }
+  p { margin: 6px 0; }
+  code { font-family: var(--font-mono, monospace); font-size: 12px; background: var(--c-code); padding: 1px 5px; border-radius: 4px; }
+  .sub { color: var(--c-muted); margin: 0 0 14px; }
+  .muted { color: var(--c-muted); }
+
+  /* badges */
+  .b { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .ok { color: var(--c-ok); } .warn { color: var(--c-warn); } .bad { color: var(--c-bad); } .info { color: var(--c-info); } .off { color: var(--c-muted); }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .tile { background: var(--c-card); border: 1px solid var(--c-border); border-radius: var(--r); padding: 10px 12px; }
+  .tile .n { font-size: 24px; font-weight: 700; line-height: 1.1; }
+  .tile .l { font-size: 12px; color: var(--c-muted); }
+
+  /* timeline */
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; position: relative; }
+  .step { background: var(--c-card); border: 1px solid var(--c-border); border-top: 4px solid var(--c-muted); border-radius: var(--r); padding: 8px 10px; font-size: 12.5px; }
+  .step.ok { border-top-color: var(--c-ok); color: var(--c-fg); }
+  .step.warn { border-top-color: var(--c-warn); color: var(--c-fg); }
+  .step.next { border-top-color: var(--c-info); outline: 2px solid var(--c-info); outline-offset: -1px; color: var(--c-fg); }
+  .step.off { color: var(--c-fg); }
+  .step b { display: block; font-size: 13px; }
+  .step .d { color: var(--c-muted); font-size: 11.5px; }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid var(--c-border); }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--c-muted); }
+  td.num { width: 34px; font-weight: 700; }
+  td.st { width: 92px; }
+  td.sv { width: 76px; }
+  .wrap { overflow-x: auto; }
+
+  /* cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+  .card { background: var(--c-card); border: 1px solid var(--c-border); border-radius: var(--r); padding: 12px 14px; }
+  .card ul { margin: 6px 0 0; padding-left: 18px; }
+  .card li { margin: 3px 0; }
+
+  /* work packages */
+  .wp { border-left: 4px solid var(--c-info); background: var(--c-card); border-radius: 0 var(--r) var(--r) 0; padding: 10px 14px; margin: 8px 0; }
+  .wp .h { font-weight: 700; }
+  .wp .why { color: var(--c-muted); font-size: 12.5px; margin-top: 4px; }
+
+  /* checklist */
+  .todo { list-style: none; padding: 0; margin: 0; }
+  .todo li { padding: 7px 0 7px 26px; border-bottom: 1px solid var(--c-border); position: relative; }
+  .todo li::before { content: ""; position: absolute; left: 2px; top: 10px; width: 13px; height: 13px; border: 2px solid var(--c-muted); border-radius: 3px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--c-muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>smart-home-net-stats: improvement plan</h1>
+<p class="sub">Status on 2026-11-11, checked against <code>main</code> at <code>633831f</code>. Source of truth: <code>docs/IMPROVEMENT_PLAN.md</code>.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="n ok">3 of 5</div><div class="l">phases done or mostly done (1, 2, 5); 3 and 4 not started</div></div>
+  <div class="tile"><div class="n info">Phase 3</div><div class="l">next: 11 correctness items, 9 still open</div></div>
+  <div class="tile"><div class="n ok">30 / 33</div><div class="l">tests pass, 3 are <code>todo</code> (known bugs), 0 fail</div></div>
+  <div class="tile"><div class="n ok">clean</div><div class="l">lint clean; tree clean; <code>main</code> = <code>origin/main</code></div></div>
+</div>
+
+<h2>Timeline</h2>
+<div class="flow">
+  <div class="step ok"><b>Phase 1</b>Runtime: ESM, Node 22, ESLint 9<div class="d">d54e90c</div></div>
+  <div class="step ok"><b>Phase 5</b>Ops: two compose stacks, official images<div class="d">1321bc7 (CI dropped)</div></div>
+  <div class="step ok"><b>Dashboard v2.0</b>+ extended curl/speed measurements<div class="d">1900b40</div></div>
+  <div class="step ok"><b>Ookla speed test</b>replaces sivel's CLI<div class="d">a09e8ef</div></div>
+  <div class="step warn"><b>Phase 2</b>Unit tests, 33 tests<div class="d">31b41c5 · writer test pending</div></div>
+  <div class="step ok"><b>Dashboard v2.1</b>per-node expected speeds<div class="d">23e7dfd</div></div>
+  <div class="step ok"><b>Grafana 13.2.4</b>fresh install<div class="d">66ecf50</div></div>
+  <div class="step ok"><b>Dashboard v2.2</b>gauges, click-to-filter<div class="d">1be807c</div></div>
+  <div class="step ok"><b>DNS + v2.3</b>DnsCommand, DNS row<div class="d">633831f</div></div>
+  <div class="step next"><b>Phase 3</b>Correctness fixes<div class="d">next</div></div>
+  <div class="step off"><b>Phase 4</b>Architecture<div class="d">after Phase 3</div></div>
+</div>
+<div class="legend">
+  <span><span class="b ok">done</span> as planned</span>
+  <span><span class="b warn">partly</span> done, with a remainder</span>
+  <span><span class="b info">next</span></span>
+  <span><span class="b off">not started</span></span>
+  <span><span class="b bad">open bug</span></span>
+</div>
+
+<h2>Phase 3: correctness fixes <span class="b info">next</span></h2>
+<p>Re-checked in the code: <code>index.js</code> still calls <code>storeMetrics</code> without awaiting and never closes the writer; <code>BaseCommand._execute</code> is unchanged; <code>InfluxWriter</code> still reads <code>process.env</code> at module scope.</p>
+
+<div class="wrap">
+<table>
+  <thead><tr><th>#</th><th>Defect</th><th>Severity</th><th>Status</th><th>Package</th></tr></thead>
+  <tbody>
+    <tr><td class="num">3</td><td><b>Influx write failure crashes the process.</b> <code>flush()</code> is not awaited; a <code>401</code> becomes an unhandled rejection and the batch is lost. No <code>close()</code>; one HTTP call per point.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
+    <tr><td class="num">7</td><td><b>Make <code>InfluxWriter</code> injectable</b> (config/client via constructor). Unblocks <code>influxWriter.test.js</code>.</td><td class="sv"><span class="b warn">enabler</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
+    <tr><td class="num">1</td><td><b>A throwing parser crashes the whole run.</b> Callbacks run outside the Promise executor. Likely why <code>DataUsedCommand</code> is disabled.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
+    <tr><td class="num">2</td><td><b>No default timeout.</b> One stuck <code>ping</code> piles up under the every-minute cron. Only speed test has a timeout.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
+    <tr><td class="num">9</td><td><b>Commands never reject.</b> <code>onClose()</code> gets no exit code, so every <code>reject</code> branch is dead code. Pinned by <code>baseCommand.test.js</code>, which must change with the fix.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
+    <tr><td class="num">4</td><td><b>Garbage points on a malformed result.</b> <code>storeMetrics(undefined, ...)</code> writes a fieldless point.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
+    <tr><td class="num">5</td><td><b><code>null</code> field values.</b> Speed test side is fixed; <code>CurlCommand</code> still writes <code>null</code>. Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b warn">half done</span></td><td>C</td></tr>
+    <tr><td class="num">10</td><td><b>Ping round-trip times keep comma decimals</b> (only loss is normalised). Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
+    <tr><td class="num">11</td><td><b>Impossible Ookla values stored</b> (e.g. 1,488,485,955 ms latency on 2026-10-20). Drop out-of-range values, log them, add a test with the real value.</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
+    <tr><td class="num">8</td><td><b><code>WAN_INTERFACE</code> missing from <code>.env.template</code></b> (the <code>INFLUS_PASS</code> typo is fixed).</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b warn">half done</span></td><td>D</td></tr>
+    <tr><td class="num">6</td><td><b>Broken log rotation</b> (fixed in Phase 5).</td><td class="sv"><span class="b off">low</span></td><td class="st"><span class="b ok">done</span></td><td>n/a</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Suggested order inside Phase 3</h2>
+<div class="wp"><div class="h">A. Influx writes: #3 + #7, then <code>influxWriter.test.js</code></div>
+  <div class="why">Highest severity, and the injectable constructor is what lets the writer be tested. Finishes Phase 2. Check: a wrong <code>INFLUX_PASS</code> logs an error and does not crash.</div></div>
+<div class="wp"><div class="h">B. One <code>BaseCommand</code> rewrite: #1 + #2 + #9 + #4</div>
+  <div class="why">Four defects live in the same 40 lines. Settle from the <code>exec</code> callback, wrap the parse in <code>try/catch</code>, pass the exit code, default timeout, guard on <code>metricName</code> in <code>runCommands</code>. Update <code>baseCommand.test.js</code> and the <code>dataUsedCommand</code> <code>todo</code>. Also store the Ookla failure reason (open bug).</div></div>
+<div class="wp"><div class="h">C. Small parser fixes: #5, #10, #11</div>
+  <div class="why">Each is a few lines; remove the matching <code>todo</code> marks and add the Ookla outlier test. Check: <code>yarn test</code> shows <code>todo 0</code>.</div></div>
+<div class="wp"><div class="h">D. Leftovers: #8</div>
+  <div class="why">Add <code>WAN_INTERFACE</code> to the template. <code>DataUsedCommand</code> stays disabled in <code>index.js</code> until you want it.</div></div>
+
+<h2>Phase 4: architecture <span class="b off">not started</span></h2>
+<div class="cards">
+  <div class="card"><h3>Collapse command boilerplate</h3>
+    <p><code>BaseCommand.execute</code> becomes a template method. Each command declares <code>buildCommand</code>, <code>metricName</code>, <code>errorMetricName</code>, <code>buildTags</code>, <code>parseOutput</code>. Command files shrink by about half; the <code>{metricName, metrics, tags}</code> contract stays.</p></div>
+  <div class="card"><h3>Probe targets as configuration</h3>
+    <p>Move the batches out of <code>index.js</code> to <code>Service/config/probes.js</code>, driven by <code>PING_TARGETS</code> / <code>CURL_TARGETS</code>. Add them to <code>.env.template</code> and the compose <code>environment:</code> list. No rebuild across the Pis.</p></div>
+  <div class="card"><h3>In-process scheduler replaces cron</h3>
+    <p>Minute-aligned scheduler in Node; keep the one-shot CLI mode. Deletes <code>containerScripts/</code>, the env dump, <code>cron</code> in the Dockerfile, and the log bind mount. Also lets <code>frequent</code> skip the minute of the node's own speed test.</p></div>
+</div>
+<p class="muted">After Phase 4: diff measurement and field names. They must be byte-identical, or the dashboards go blank.</p>
+
+<h2>Needs you (not code in this repo)</h2>
+<ul class="todo">
+  <li><b>Deploy to the Pis:</b> rebuild the service on each node and set <code>DNS_SERVERS</code> per node. The v2.3 DNS panels stay empty until then.</li>
+  <li><b>Check arm64 and arm/v7 builds</b> on the Pis (Ookla download and checksum, <code>dnsutils</code>). Not verified yet.</li>
+  <li><b>Decide <code>SPEED_TEST_SERVER_ID</code>.</b> Unpinned runs measured 248 and 332 Mbit/s against 883 on a pinned server, and the dashboard flags the low ones.</li>
+  <li><b>Rotate the Influx password</b> if the old Docker Hub images (they contain <code>.env</code>) are public; consider deleting those tags. Also decide on the Ookla licence before pushing a public image.</li>
+  <li><b>Delete <code>/var/lib/smart-home/grafana.old-12.0.2</code></b> on the infrastructure host once Grafana 13 has run cleanly for a few days (upgrade was 2026-10-19).</li>
+  <li><b>Fix the migration wording</b> in <code>Infrastructure/README.md</code> (applies only to databases from the old scripts; read passwords from <code>.env</code>).</li>
+  <li><b>Optional cleanup:</b> delete the four merged local branches (<code>phase-1-esm</code>, <code>phase-5-infra</code>, <code>ookla-speedtest</code>, <code>dashboard-v2</code>).</li>
+  <li><b>Optional:</b> dashboard panels for the new speed test fields (jitter, loaded latency, server); none of the generator's panels use them yet.</li>
+</ul>
+
+<h2>Open bugs outside Phase 3</h2>
+<div class="wrap">
+<table>
+  <thead><tr><th>Bug</th><th>Severity</th><th>Where it gets fixed</th></tr></thead>
+  <tbody>
+    <tr><td>A speed test saturates the line for ~25 s, so ping and curl in that minute (on every node) look slow and are not marked.</td><td class="sv"><span class="b info">low</span></td><td>Phase 4 scheduler</td></tr>
+    <tr><td>An Ookla failure records only <code>count = 1</code>; the reason is lost.</td><td class="sv"><span class="b info">low</span></td><td>With Phase 3 package B</td></tr>
+    <tr><td>Ookla prints its licence notice on stderr every run, filling <code>cron2.log</code>.</td><td class="sv"><span class="b off">cosmetic</span></td><td>Filter stderr</td></tr>
+    <tr><td>Local install on Ubuntu 24.04: Ookla's apt repo has no <code>noble</code> release and conflicts with sivel's <code>speedtest-cli</code>.</td><td class="sv"><span class="b info">low</span></td><td>Docs in <code>Service/README.md</code></td></tr>
+    <tr><td>Anonymous Admin in Grafana is deprecated and may become read-only in a later version. Still works in 13.2.4.</td><td class="sv"><span class="b info">low</span></td><td>Check at each Grafana upgrade</td></tr>
+    <tr><td>v1.0 legacy panels show "No data" (fixed <code>SensorID</code> list); v1.0 is kept as-is on purpose.</td><td class="sv"><span class="b off">n/a</span></td><td>Not fixing</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Decisions already made</h2>
+<div class="cards">
+  <div class="card"><h3>Settled, do not reopen</h3>
+    <ul>
+      <li>Node 22 LTS, native ESM, plain JavaScript (not 24: no arm/v7 image).</li>
+      <li>Tests on built-in <code>node:test</code>, no extra dependencies.</li>
+      <li><code>Infrastructure/</code> and <code>Service/</code> are separate deployments with their own compose and <code>.env</code>.</li>
+      <li>InfluxDB port 8086 stays on the LAN, with auth on.</li>
+      <li>CI was dropped.</li>
+    </ul></div>
+  <div class="card"><h3>Deliberately not doing</h3>
+    <ul>
+      <li>InfluxDB 1.8 to 2.x/3 (data move, Flux rewrite, auth rework).</li>
+      <li>TypeScript.</li>
+      <li>Re-enabling <code>DataUsedCommand</code> (Phase 3 only makes it safe).</li>
+    </ul></div>
+</div>
+
+</body>
+</html>
