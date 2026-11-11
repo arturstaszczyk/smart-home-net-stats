@@ -13,10 +13,20 @@ export default class DataUsedCommand extends BaseCommand {
         const downloadBytes = stdout.match(/RX packets [0-9]+\s+bytes ([0-9]+)/)
         const uploadBytes = stdout.match(/TX packets [0-9]+\s+bytes ([0-9]+)/)
 
-        output.downloadBytes = downloadBytes[1]
-        output.uploadBytes = uploadBytes[1]
-        output.diffDownloaded = output.downloadBytes - oldDownloadBytes
-        output.diffUploaded = output.uploadBytes - oldUploadBytes
+        // Omit whatever the output does not contain (e.g. "Device not found")
+        // instead of throwing on a null match
+        if (downloadBytes) {
+            output.downloadBytes = downloadBytes[1]
+        }
+        if (uploadBytes) {
+            output.uploadBytes = uploadBytes[1]
+        }
+        if (downloadBytes) {
+            output.diffDownloaded = output.downloadBytes - oldDownloadBytes
+        }
+        if (uploadBytes) {
+            output.diffUploaded = output.uploadBytes - oldUploadBytes
+        }
 
         return output
     }
