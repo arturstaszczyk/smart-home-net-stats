@@ -24,5 +24,6 @@ services:
       DNS_SERVERS: ${DNS_SERVERS:-}
       DNS_CACHED_NAME: ${DNS_CACHED_NAME:-}
       DNS_UNCACHED_DOMAIN: ${DNS_UNCACHED_DOMAIN:-}
+      WAN_INTERFACE: ${WAN_INTERFACE:-}
     volumes:
       - ${DATA_DIR:-/var/lib/smart-home}/service:/var/log

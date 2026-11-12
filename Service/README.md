@@ -41,6 +41,7 @@ cp .env.template .env && nano .env
 | `DNS_SERVERS` | Optional. More DNS resolvers to examine every minute, as `name=address` pairs with commas between them. For example: `local=10.0.0.53,router=10.0.0.1,public=1.1.1.1`. Use only the resolvers that this node can reach. The service always examines the usual resolver of the node ("system"). Refer to [DNS checks](#dns-checks). |
 | `DNS_CACHED_NAME` | Optional. The name for the "cached" query. The default is `google.com`. |
 | `DNS_UNCACHED_DOMAIN` | Optional. The domain for the random names of the "uncached" query. The default is `example.com`. |
+| `WAN_INTERFACE` | Optional. The network interface for the data-used command (for example `eth0`). The default is `wlan0`. Only the data-used command uses this variable. This command is off (refer to `index.js`). |
 | `SERVICE_IMAGE` | Only for Docker. `smart-home-service` to build the image on this computer, or your Docker Hub tag to download it (refer to [Build](#build)). |
 | `DATA_DIR` | Only for Docker. The host directory for the logs (`<DATA_DIR>/service/`). The default is `/var/lib/smart-home`. |
 
