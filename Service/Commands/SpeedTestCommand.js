@@ -4,6 +4,24 @@ import BaseCommand from './BaseCommand.js'
 // Ookla reports bandwidth in bytes per second; it is stored in Mbit/s, as before.
 const toMbits = (bytesPerSecond) => _.isNumber(bytesPerSecond) ? bytesPerSecond * 8 / 1000000 : undefined
 
+// Plausible ranges (inclusive) for the stored values; anything outside is an Ookla glitch
+// (e.g. upload.latency.iqm = 1488485955 ms on 2026-10-20) and is dropped so it can't skew averages.
+const MAX_LATENCY_MS = 60000
+const PLAUSIBLE_RANGES = {
+    download: [0, 10000], // Mbit/s, i.e. up to 10 Gbit/s
+    upload: [0, 10000],
+    ping: [0, MAX_LATENCY_MS],
+    jitter: [0, MAX_LATENCY_MS],
+    packetLoss: [0, 100], // %
+    downloadLatency: [0, MAX_LATENCY_MS],
+    uploadLatency: [0, MAX_LATENCY_MS],
+}
+
+const isPlausible = (name, value) => {
+    const range = PLAUSIBLE_RANGES[name]
+    return !range || (value >= range[0] && value <= range[1])
+}
+
 export default class SpeedTestCommand extends BaseCommand {
 
     // Parses the JSON printed by Ookla's `speedtest --format=json`. Values the test did not
@@ -29,7 +47,15 @@ export default class SpeedTestCommand extends BaseCommand {
             serverId: _.get(result, 'server.id'),
         }
 
-        return _.omitBy(speedStats, (value) => !_.isFinite(value))
+        const reported = _.omitBy(speedStats, (value) => !_.isFinite(value))
+        return _.omitBy(reported, (value, name) => {
+            if (isPlausible(name, value)) {
+                return false
+            }
+            const [min, max] = PLAUSIBLE_RANGES[name]
+            console.log(`Dropping implausible speed test value ${name}=${value} (expected ${min} to ${max})`)
+            return true
+        })
     }
 
     buildCommand(options) {

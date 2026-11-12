@@ -35,6 +35,73 @@ test('omits values the server did not report', () => {
     assert.equal(stats.download, 882.822232)
 })
 
+test('drops the impossible upload latency Ookla reported on 2026-10-20 and keeps the rest', () => {
+    const result = okResult()
+    result.upload.latency.iqm = 1488485955
+
+    assert.deepEqual(speedTest.parseOutput(JSON.stringify(result)), {
+        download: 882.822232,
+        upload: 100.994848,
+        ping: 5.112,
+        jitter: 0.401,
+        packetLoss: 0,
+        downloadLatency: 5.607,
+        serverId: 38577,
+    })
+})
+
+test('keeps values on the plausible-range boundaries', () => {
+    const result = okResult()
+    result.download.bandwidth = 1250000000 // exactly 10 Gbit/s
+    result.upload.bandwidth = 0
+    result.ping.latency = 60000
+    result.ping.jitter = 0
+    result.packetLoss = 100
+    result.download.latency.iqm = 60000
+    result.upload.latency.iqm = 0
+
+    assert.deepEqual(speedTest.parseOutput(JSON.stringify(result)), {
+        download: 10000,
+        upload: 0,
+        ping: 60000,
+        jitter: 0,
+        packetLoss: 100,
+        downloadLatency: 60000,
+        uploadLatency: 0,
+        serverId: 38577,
+    })
+})
+
+test('drops values just above the plausible-range boundaries', () => {
+    const result = okResult()
+    result.download.bandwidth = 1250000001
+    result.ping.latency = 60000.001
+    result.ping.jitter = 60001
+    result.packetLoss = 100.1
+    result.download.latency.iqm = 60000.5
+
+    assert.deepEqual(speedTest.parseOutput(JSON.stringify(result)), {
+        upload: 100.994848,
+        uploadLatency: 4.852,
+        serverId: 38577,
+    })
+})
+
+test('drops negative values', () => {
+    const result = okResult()
+    result.upload.bandwidth = -1
+    result.ping.jitter = -0.001
+    result.packetLoss = -5
+    result.upload.latency.iqm = -4.852
+
+    assert.deepEqual(speedTest.parseOutput(JSON.stringify(result)), {
+        download: 882.822232,
+        ping: 5.112,
+        downloadLatency: 5.607,
+        serverId: 38577,
+    })
+})
+
 test('returns no fields for output that is not JSON', () => {
     assert.deepEqual(speedTest.parseOutput('Ping: 12.236 ms\nDownload: 675.51 Mbit/s\n'), {})
 })
