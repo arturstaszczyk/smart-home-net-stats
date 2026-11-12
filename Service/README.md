@@ -125,15 +125,16 @@ node --test Commands/__tests__/speedTestCommand.test.js    # one file
 yarn lint
 ```
 
-The tests use the test runner that is part of Node (`node:test`). It is not necessary to install other software. The tests do not use the network.
+The tests use the test runner that is part of Node (`node:test`). It is not necessary to install other software. The tests do not use the network. Some tests start a local test server on this computer.
 
 * **Parsers:** The tests compare the result of `parseOutput` of each command with real output in `Commands/__tests__/fixtures/`. The README in that directory tells how each file was made and how to add a file. The tests also use variants with a comma as the decimal mark.
 * **Speed test, all steps:** `SpeedTestCommand.execute` runs with a test `speedtest` script on the `PATH`. The tests use a successful result and the real Ookla failure (exit code 2).
-* **`BaseCommand`:** The tests examine the success, error and close functions with real, simple shell commands.
+* **`BaseCommand`:** The tests examine the success, error and close functions with real, simple shell commands. They also examine a parser that fails and a command that is too slow. In these cases, the command gives its error metric.
+* **`InfluxWriter`:** The tests in `Influx/__tests__/` use a test write API. They examine the tags, the float fields, one write for each batch, the results that the service skips, and a write that fails. Two tests use the real InfluxDB client with a local test server.
 
 The tests with the **`todo`** mark are for known errors. The plan has the repair of these errors (`../docs/IMPROVEMENT_PLAN.md`, Phase 3). The test runner shows these tests with ⚠ and lists them in the summary as "failing tests". They do not cause the test run to fail. When you repair one of these errors, remove the `todo` mark from its test. Then the test makes sure that the error does not occur again. A test run is successful when the last lines show `fail 0`. At this time, no test has the `todo` mark.
 
-These parts do not have unit tests yet: `InfluxWriter` and `index.js`. `InfluxWriter` reads its configuration when it is imported (plan, Phase 3 #7).
+`index.js` does not have unit tests.
 
 ### With a real InfluxDB
 
@@ -146,7 +147,7 @@ If a change affects how the commands run or how the data is written, also do the
    docker compose exec service bash -c '. ./env.docker.sh; ./containerScripts/run-script.sh frequent'  # in the container
    ```
 
-   After these lines, the log must not show `Write to InfluxDB failed`. If the log shows `401 Unauthorized`, the user name or password is not correct.
+   After these lines, the log must show `--WROTE <n> points to Influx`. The log must not show `Influx write failed`. If the log shows `401 Unauthorized`, the user name or password is not correct.
 
 2. **Make sure that the data is in InfluxDB.** Do this command on the infrastructure host, in its `Infrastructure/` directory:
 
@@ -165,7 +166,7 @@ The data that each batch writes:
 | `ping` | `address`, `computerTag` | `avg`, `min`, `max`, `mdev` (ms), `packetsPercent`, `packetsSent` |
 | `curl` | `address`, `computerTag` | `namelookup`, `connect`, `appconnect`, `pretransfer`, `starttransfer`, `total`: the time in seconds from the start of the request to each step (`appconnect` is 0 for HTTP without TLS) |
 | `dns` | `computerTag`, `resolver`, `query` (`cached` or `uncached`) | `queryTime` (ms) |
-| `speedtest` | `computerTag` | `download`, `upload` (Mbit/s), `ping`, `jitter` (ms), `packetLoss` (%, if the server measures it), `downloadLatency`, `uploadLatency` (ms, the latency while the test uses all of the connection), `serverId` |
+| `speedtest` | `computerTag` | `download`, `upload` (Mbit/s), `ping`, `jitter` (ms), `packetLoss` (%, if the server measures it), `downloadLatency`, `uploadLatency` (ms, the latency while the test uses all of the connection), `serverId`. The service does not keep a value that is not possible. The limits are 0 to 60 000 ms, 0 to 10 000 Mbit/s and 0 to 100 %. The log shows each value that the service does not keep. |
 | `pingError`, `curlError`, `speedtest-error`, `dnsError` | `computerTag` (and `address`, or `resolver` and `query`), `error` | `count` = 1 for each command that failed. For `dnsError`, `error` is `no reply` or the status of the resolver, for example `servfail`. |
 
 CAUTION: Do not change the names of the measurements or the fields (`ping`, `pingError`, `curl`, `curlError`, `dns`, `dnsError`, `speedtest`, `speedtest-error`). The Grafana dashboards use these names. If a name changes, the dashboards show no data and no error.
@@ -207,7 +208,7 @@ A Pi can measure only the speed of its own connection. The Ethernet connection o
 
 ## Troubleshooting
 
-**`Write to InfluxDB failed ... 401 Unauthorized`.** `INFLUX_USER` or `INFLUX_PASS` is different from the values on the infrastructure host. Correct `.env`. Then do `docker compose up -d`. This command makes the container again with the new values.
+**`Influx write failed, batch not stored: HTTP 401 Unauthorized`.** `INFLUX_USER` or `INFLUX_PASS` is different from the values on the infrastructure host. Correct `.env`. Then do `docker compose up -d`. This command makes the container again with the new values.
 
 **`Operation not permitted` from cron or other tools, on an older 32-bit Raspberry Pi OS (Buster).** The `libseccomp2` of the host is too old for the Debian 12 image. Install `libseccomp2` 2.4.4 or newer from buster-backports. Then start Docker again. For more data, refer to https://stackoverflow.com/questions/65717411/operation-not-permitted-during-docker-build
 
