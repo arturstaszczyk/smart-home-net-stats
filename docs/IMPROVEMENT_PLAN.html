@@ -77,99 +77,94 @@
 <body>
 
 <h1>smart-home-net-stats: improvement plan</h1>
-<p class="sub">Status on 2026-11-11, checked against <code>main</code> at <code>633831f</code>. Source of truth: <code>docs/IMPROVEMENT_PLAN.md</code>.</p>
+<p class="sub">Status on 2026-11-12, checked against <code>main</code> at <code>ea60a9e</code>. Source of truth: <code>docs/IMPROVEMENT_PLAN.md</code>.</p>
 
 <div class="tiles">
-  <div class="tile"><div class="n ok">3 of 5</div><div class="l">phases done or mostly done (1, 2, 5); 3 and 4 not started</div></div>
-  <div class="tile"><div class="n info">Phase 3</div><div class="l">next: 11 correctness items, 9 still open</div></div>
-  <div class="tile"><div class="n ok">30 / 33</div><div class="l">tests pass, 3 are <code>todo</code> (known bugs), 0 fail</div></div>
-  <div class="tile"><div class="n ok">clean</div><div class="l">lint clean; tree clean; <code>main</code> = <code>origin/main</code></div></div>
+  <div class="tile"><div class="n ok">4 of 5</div><div class="l">phases done (1, 2, 3, 5); Phase 4 next</div></div>
+  <div class="tile"><div class="n ok">11 / 11</div><div class="l">Phase 3 items done, 3 follow-ups open</div></div>
+  <div class="tile"><div class="n ok">57 / 57</div><div class="l">tests pass, 0 <code>todo</code>, 0 fail; lint clean</div></div>
+  <div class="tile"><div class="n warn">not deployed</div><div class="l">Phase 3 is on <code>main</code>, not yet on any Pi</div></div>
 </div>
 
 <h2>Timeline</h2>
 <div class="flow">
-  <div class="step ok"><b>Phase 1</b>Runtime: ESM, Node 22, ESLint 9<div class="d">d54e90c</div></div>
-  <div class="step ok"><b>Phase 5</b>Ops: two compose stacks, official images<div class="d">1321bc7 (CI dropped)</div></div>
-  <div class="step ok"><b>Dashboard v2.0</b>+ extended curl/speed measurements<div class="d">1900b40</div></div>
+  <div class="step ok"><b>Phase 1</b>ESM, Node 22, ESLint 9<div class="d">d54e90c</div></div>
+  <div class="step ok"><b>Phase 5</b>Two compose stacks<div class="d">1321bc7 (no CI)</div></div>
+  <div class="step ok"><b>Dashboard v2.0</b>extended measurements<div class="d">1900b40</div></div>
   <div class="step ok"><b>Ookla speed test</b>replaces sivel's CLI<div class="d">a09e8ef</div></div>
-  <div class="step warn"><b>Phase 2</b>Unit tests, 33 tests<div class="d">31b41c5 · writer test pending</div></div>
+  <div class="step ok"><b>Phase 2</b>Unit tests<div class="d">31b41c5 · writer test in PR #18</div></div>
   <div class="step ok"><b>Dashboard v2.1</b>per-node expected speeds<div class="d">23e7dfd</div></div>
   <div class="step ok"><b>Grafana 13.2.4</b>fresh install<div class="d">66ecf50</div></div>
   <div class="step ok"><b>Dashboard v2.2</b>gauges, click-to-filter<div class="d">1be807c</div></div>
   <div class="step ok"><b>DNS + v2.3</b>DnsCommand, DNS row<div class="d">633831f</div></div>
-  <div class="step next"><b>Phase 3</b>Correctness fixes<div class="d">next</div></div>
-  <div class="step off"><b>Phase 4</b>Architecture<div class="d">after Phase 3</div></div>
+  <div class="step ok"><b>Phase 3, part 1</b>curl, ping, DataUsed parsers<div class="d">PRs #9–#11 · e51cdee</div></div>
+  <div class="step ok"><b>Phase 3, part 2</b>Influx writes, BaseCommand, Ookla, config<div class="d">PRs #16–#19 · ea60a9e</div></div>
+  <div class="step warn"><b>Deploy</b>rebuild on the Pis<div class="d">first real-InfluxDB run</div></div>
+  <div class="step next"><b>Phase 4</b>Architecture<div class="d">next</div></div>
 </div>
 <div class="legend">
-  <span><span class="b ok">done</span> as planned</span>
-  <span><span class="b warn">partly</span> done, with a remainder</span>
+  <span><span class="b ok">done</span></span>
+  <span><span class="b warn">needs you</span></span>
   <span><span class="b info">next</span></span>
   <span><span class="b off">not started</span></span>
-  <span><span class="b bad">open bug</span></span>
 </div>
 
-<h2>Phase 3: correctness fixes <span class="b info">next</span></h2>
-<p>Re-checked in the code: <code>index.js</code> still calls <code>storeMetrics</code> without awaiting and never closes the writer; <code>BaseCommand._execute</code> is unchanged; <code>InfluxWriter</code> still reads <code>process.env</code> at module scope.</p>
-
+<h2>Phase 3: correctness fixes <span class="b ok">done</span></h2>
+<p>Split into GitHub issues by the files each change touches, so the PRs were built in parallel and merged in any order.</p>
 <div class="wrap">
 <table>
-  <thead><tr><th>#</th><th>Defect</th><th>Severity</th><th>Status</th><th>Package</th></tr></thead>
+  <thead><tr><th>#</th><th>Defect and fix</th><th>Issue</th><th>PR</th></tr></thead>
   <tbody>
-    <tr><td class="num">3</td><td><b>Influx write failure crashes the process.</b> <code>flush()</code> is not awaited; a <code>401</code> becomes an unhandled rejection and the batch is lost. No <code>close()</code>; one HTTP call per point.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
-    <tr><td class="num">7</td><td><b>Make <code>InfluxWriter</code> injectable</b> (config/client via constructor). Unblocks <code>influxWriter.test.js</code>.</td><td class="sv"><span class="b warn">enabler</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
-    <tr><td class="num">1</td><td><b>A throwing parser crashes the whole run.</b> Callbacks run outside the Promise executor. Likely why <code>DataUsedCommand</code> is disabled.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
-    <tr><td class="num">2</td><td><b>No default timeout.</b> One stuck <code>ping</code> piles up under the every-minute cron. Only speed test has a timeout.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
-    <tr><td class="num">9</td><td><b>Commands never reject.</b> <code>onClose()</code> gets no exit code, so every <code>reject</code> branch is dead code. Pinned by <code>baseCommand.test.js</code>, which must change with the fix.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
-    <tr><td class="num">4</td><td><b>Garbage points on a malformed result.</b> <code>storeMetrics(undefined, ...)</code> writes a fieldless point.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
-    <tr><td class="num">5</td><td><b><code>null</code> field values.</b> Speed test side is fixed; <code>CurlCommand</code> still writes <code>null</code>. Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b warn">half done</span></td><td>C</td></tr>
-    <tr><td class="num">10</td><td><b>Ping round-trip times keep comma decimals</b> (only loss is normalised). Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
-    <tr><td class="num">11</td><td><b>Impossible Ookla values stored</b> (e.g. 1,488,485,955 ms latency on 2026-10-20). Drop out-of-range values, log them, add a test with the real value.</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
-    <tr><td class="num">8</td><td><b><code>WAN_INTERFACE</code> missing from <code>.env.template</code></b> (the <code>INFLUS_PASS</code> typo is fixed).</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b warn">half done</span></td><td>D</td></tr>
-    <tr><td class="num">6</td><td><b>Broken log rotation</b> (fixed in Phase 5).</td><td class="sv"><span class="b off">low</span></td><td class="st"><span class="b ok">done</span></td><td>n/a</td></tr>
+    <tr><td class="num">3</td><td><b>A failed Influx write crashed the process.</b> Now one request per batch; a failure is logged and the process exits 0.</td><td>#12</td><td>#18</td></tr>
+    <tr><td class="num">7</td><td><b><code>InfluxWriter</code> is injectable</b> and has 9 tests.</td><td>#12</td><td>#18</td></tr>
+    <tr><td class="num">4</td><td><b>Garbage points.</b> Results without a metric name or numeric fields are skipped and logged.</td><td>#12</td><td>#18</td></tr>
+    <tr><td class="num">1</td><td><b>A throwing parser crashed the run.</b> <code>DataUsedCommand</code> parser fixed; <code>BaseCommand</code> now turns any parse error into the error metric.</td><td>#7, #13</td><td>#11, #19</td></tr>
+    <tr><td class="num">2</td><td><b>No timeout.</b> 20 s default per command, then <code>SIGKILL</code> (DNS 10 s, speed test 100 s).</td><td>#13</td><td>#19</td></tr>
+    <tr><td class="num">9</td><td><b>Commands never rejected.</b> Settled as "always resolve with the error metric"; dead branches removed.</td><td>#13</td><td>#19</td></tr>
+    <tr><td class="num">5</td><td><b><code>null</code> fields.</b> Curl omits unmatched timings.</td><td>#6</td><td>#9</td></tr>
+    <tr><td class="num">10</td><td><b>Ping comma decimals</b> in round-trip times normalised.</td><td>#8</td><td>#10</td></tr>
+    <tr><td class="num">11</td><td><b>Impossible Ookla values</b> dropped and logged (0–60 000 ms, 0–10 Gbit/s, 0–100 %).</td><td>#14</td><td>#17</td></tr>
+    <tr><td class="num">8</td><td><b><code>WAN_INTERFACE</code></b> in the template, compose and README.</td><td>#15</td><td>#16</td></tr>
+    <tr><td class="num">6</td><td><b>Log rotation</b> (fixed in Phase 5).</td><td>n/a</td><td>n/a</td></tr>
   </tbody>
 </table>
 </div>
 
-<h2>Suggested order inside Phase 3</h2>
-<div class="wp"><div class="h">A. Influx writes: #3 + #7, then <code>influxWriter.test.js</code></div>
-  <div class="why">Highest severity, and the injectable constructor is what lets the writer be tested. Finishes Phase 2. Check: a wrong <code>INFLUX_PASS</code> logs an error and does not crash.</div></div>
-<div class="wp"><div class="h">B. One <code>BaseCommand</code> rewrite: #1 + #2 + #9 + #4</div>
-  <div class="why">Four defects live in the same 40 lines. Settle from the <code>exec</code> callback, wrap the parse in <code>try/catch</code>, pass the exit code, default timeout, guard on <code>metricName</code> in <code>runCommands</code>. Update <code>baseCommand.test.js</code> and the <code>dataUsedCommand</code> <code>todo</code>. Also store the Ookla failure reason (open bug).</div></div>
-<div class="wp"><div class="h">C. Small parser fixes: #5, #10, #11</div>
-  <div class="why">Each is a few lines; remove the matching <code>todo</code> marks and add the Ookla outlier test. Check: <code>yarn test</code> shows <code>todo 0</code>.</div></div>
-<div class="wp"><div class="h">D. Leftovers: #8</div>
-  <div class="why">Add <code>WAN_INTERFACE</code> to the template. <code>DataUsedCommand</code> stays disabled in <code>index.js</code> until you want it.</div></div>
+<h2>Phase 3 follow-ups</h2>
+<div class="wp"><div class="h">Verify against the real InfluxDB <span class="b warn">needs a Pi rebuild</span></div>
+  <div class="why">All checks so far used unit tests, a local server answering <code>401</code> and an unused port. On the first rebuild: a normal run logs <code>--WROTE n points to Influx</code>; a wrong <code>INFLUX_PASS</code> logs the error and does not crash.</div></div>
+<div class="wp"><div class="h">Store the Ookla failure reason</div>
+  <div class="why">Only <code>count = 1</code> is stored. Pass <code>stderr</code> to <code>onError</code> (possible since PR #19) and store it as a low-cardinality tag, or log it.</div></div>
+<div class="wp"><div class="h">A failed write exits 0</div>
+  <div class="why">Shows only in the log, and the batch is not retried. Fine under cron; revisit with the Phase 4 scheduler.</div></div>
+<div class="wp"><div class="h">Delete the bad Ookla point from 2026-10-20</div>
+  <div class="why">New outliers are dropped, but the 17-day <code>uploadLatency</code> already in InfluxDB still skews averages.</div></div>
 
-<h2>Phase 4: architecture <span class="b off">not started</span></h2>
+<h2>Phase 4: architecture <span class="b info">next</span></h2>
 <div class="cards">
-  <div class="card"><h3>Collapse command boilerplate</h3>
-    <p><code>BaseCommand.execute</code> becomes a template method. Each command declares <code>buildCommand</code>, <code>metricName</code>, <code>errorMetricName</code>, <code>buildTags</code>, <code>parseOutput</code>. Command files shrink by about half; the <code>{metricName, metrics, tags}</code> contract stays.</p></div>
-  <div class="card"><h3>Probe targets as configuration</h3>
-    <p>Move the batches out of <code>index.js</code> to <code>Service/config/probes.js</code>, driven by <code>PING_TARGETS</code> / <code>CURL_TARGETS</code>. Add them to <code>.env.template</code> and the compose <code>environment:</code> list. No rebuild across the Pis.</p></div>
-  <div class="card"><h3>In-process scheduler replaces cron</h3>
-    <p>Minute-aligned scheduler in Node; keep the one-shot CLI mode. Deletes <code>containerScripts/</code>, the env dump, <code>cron</code> in the Dockerfile, and the log bind mount. Also lets <code>frequent</code> skip the minute of the node's own speed test.</p></div>
+  <div class="card"><h3>Collapse command boilerplate</h3>Template method in <code>BaseCommand</code>; command files shrink by about half. Drop the dead <code>try/catch</code> in <code>runCommands</code>.</div>
+  <div class="card"><h3>Targets as configuration</h3><code>PING_TARGETS</code> / <code>CURL_TARGETS</code> in <code>.env</code>; no rebuild across the Pis.</div>
+  <div class="card"><h3>In-process scheduler</h3>Replaces cron; deletes <code>containerScripts/</code>. <b>Must skip a tick while a batch still runs:</b> a batch with unreachable targets took ~51 s of its 60 s slot.</div>
 </div>
 <p class="muted">After Phase 4: diff measurement and field names. They must be byte-identical, or the dashboards go blank.</p>
 
 <h2>Needs you (not code in this repo)</h2>
 <ul class="todo">
-  <li><b>Deploy to the Pis:</b> rebuild the service on each node and set <code>DNS_SERVERS</code> per node. The v2.3 DNS panels stay empty until then.</li>
-  <li><b>Check arm64 and arm/v7 builds</b> on the Pis (Ookla download and checksum, <code>dnsutils</code>). Not verified yet.</li>
-  <li><b>Decide <code>SPEED_TEST_SERVER_ID</code>.</b> Unpinned runs measured 248 and 332 Mbit/s against 883 on a pinned server, and the dashboard flags the low ones.</li>
-  <li><b>Rotate the Influx password</b> if the old Docker Hub images (they contain <code>.env</code>) are public; consider deleting those tags. Also decide on the Ookla licence before pushing a public image.</li>
-  <li><b>Delete <code>/var/lib/smart-home/grafana.old-12.0.2</code></b> on the infrastructure host once Grafana 13 has run cleanly for a few days (upgrade was 2026-10-19).</li>
-  <li><b>Fix the migration wording</b> in <code>Infrastructure/README.md</code> (applies only to databases from the old scripts; read passwords from <code>.env</code>).</li>
-  <li><b>Optional cleanup:</b> delete the four merged local branches (<code>phase-1-esm</code>, <code>phase-5-infra</code>, <code>ookla-speedtest</code>, <code>dashboard-v2</code>).</li>
-  <li><b>Optional:</b> dashboard panels for the new speed test fields (jitter, loaded latency, server); none of the generator's panels use them yet.</li>
+  <li><b>Deploy to the Pis:</b> rebuild the service on each node (Phase 3 and DNS checks) and set <code>DNS_SERVERS</code> per node.</li>
+  <li><b>Check arm64 and arm/v7 builds</b> on the Pis. Not verified yet.</li>
+  <li><b>Decide <code>SPEED_TEST_SERVER_ID</code></b> (248 and 332 vs 883 Mbit/s on a pinned server).</li>
+  <li><b>Rotate the Influx password</b> if the old Docker Hub images (they contain <code>.env</code>) are public. Decide on the Ookla licence before pushing a public image.</li>
+  <li><b>Delete <code>grafana.old-12.0.2</code></b> on the infrastructure host.</li>
+  <li><b>Fix the migration wording</b> in <code>Infrastructure/README.md</code>.</li>
+  <li><b>Optional:</b> delete merged branches; add dashboard panels for jitter, loaded latency and server.</li>
 </ul>
 
-<h2>Open bugs outside Phase 3</h2>
+<h2>Other open bugs</h2>
 <div class="wrap">
 <table>
   <thead><tr><th>Bug</th><th>Severity</th><th>Where it gets fixed</th></tr></thead>
   <tbody>
     <tr><td>A speed test saturates the line for ~25 s, so ping and curl in that minute (on every node) look slow and are not marked.</td><td class="sv"><span class="b info">low</span></td><td>Phase 4 scheduler</td></tr>
-    <tr><td>An Ookla failure records only <code>count = 1</code>; the reason is lost.</td><td class="sv"><span class="b info">low</span></td><td>With Phase 3 package B</td></tr>
     <tr><td>Ookla prints its licence notice on stderr every run, filling <code>cron2.log</code>.</td><td class="sv"><span class="b off">cosmetic</span></td><td>Filter stderr</td></tr>
     <tr><td>Local install on Ubuntu 24.04: Ookla's apt repo has no <code>noble</code> release and conflicts with sivel's <code>speedtest-cli</code>.</td><td class="sv"><span class="b info">low</span></td><td>Docs in <code>Service/README.md</code></td></tr>
     <tr><td>Anonymous Admin in Grafana is deprecated and may become read-only in a later version. Still works in 13.2.4.</td><td class="sv"><span class="b info">low</span></td><td>Check at each Grafana upgrade</td></tr>
@@ -192,7 +187,7 @@
     <ul>
       <li>InfluxDB 1.8 to 2.x/3 (data move, Flux rewrite, auth rework).</li>
       <li>TypeScript.</li>
-      <li>Re-enabling <code>DataUsedCommand</code> (Phase 3 only makes it safe).</li>
+      <li>Re-enabling <code>DataUsedCommand</code> (Phase 3 made it safe; leave it off until wanted).</li>
     </ul></div>
 </div>
 
