@@ -77,12 +77,12 @@
 <body>
 
 <h1>smart-home-net-stats: improvement plan</h1>
-<p class="sub">Status on 2026-11-11, checked against <code>main</code> at <code>633831f</code>. Source of truth: <code>docs/IMPROVEMENT_PLAN.md</code>.</p>
+<p class="sub">Status on 2026-11-11, checked against <code>main</code> at <code>e51cdee</code>. Source of truth: <code>docs/IMPROVEMENT_PLAN.md</code>.</p>
 
 <div class="tiles">
   <div class="tile"><div class="n ok">3 of 5</div><div class="l">phases done or mostly done (1, 2, 5); 3 and 4 not started</div></div>
-  <div class="tile"><div class="n info">Phase 3</div><div class="l">next: 11 correctness items, 9 still open</div></div>
-  <div class="tile"><div class="n ok">30 / 33</div><div class="l">tests pass, 3 are <code>todo</code> (known bugs), 0 fail</div></div>
+  <div class="tile"><div class="n info">Phase 3</div><div class="l">started: 11 items, 3 done, 2 partly, 6 open</div></div>
+  <div class="tile"><div class="n ok">35 / 35</div><div class="l">tests pass, 0 <code>todo</code>, 0 fail</div></div>
   <div class="tile"><div class="n ok">clean</div><div class="l">lint clean; tree clean; <code>main</code> = <code>origin/main</code></div></div>
 </div>
 
@@ -92,12 +92,13 @@
   <div class="step ok"><b>Phase 5</b>Ops: two compose stacks, official images<div class="d">1321bc7 (CI dropped)</div></div>
   <div class="step ok"><b>Dashboard v2.0</b>+ extended curl/speed measurements<div class="d">1900b40</div></div>
   <div class="step ok"><b>Ookla speed test</b>replaces sivel's CLI<div class="d">a09e8ef</div></div>
-  <div class="step warn"><b>Phase 2</b>Unit tests, 33 tests<div class="d">31b41c5 · writer test pending</div></div>
+  <div class="step warn"><b>Phase 2</b>Unit tests, now 35<div class="d">31b41c5 · writer test pending</div></div>
   <div class="step ok"><b>Dashboard v2.1</b>per-node expected speeds<div class="d">23e7dfd</div></div>
   <div class="step ok"><b>Grafana 13.2.4</b>fresh install<div class="d">66ecf50</div></div>
   <div class="step ok"><b>Dashboard v2.2</b>gauges, click-to-filter<div class="d">1be807c</div></div>
   <div class="step ok"><b>DNS + v2.3</b>DnsCommand, DNS row<div class="d">633831f</div></div>
-  <div class="step next"><b>Phase 3</b>Correctness fixes<div class="d">next</div></div>
+  <div class="step ok"><b>Parser fixes</b>curl, ping, DataUsed (issues #6–#8)<div class="d">PRs #9–#11 · e51cdee</div></div>
+  <div class="step next"><b>Phase 3</b>Correctness fixes<div class="d">next: 8 items left</div></div>
   <div class="step off"><b>Phase 4</b>Architecture<div class="d">after Phase 3</div></div>
 </div>
 <div class="legend">
@@ -109,7 +110,7 @@
 </div>
 
 <h2>Phase 3: correctness fixes <span class="b info">next</span></h2>
-<p>Re-checked in the code: <code>index.js</code> still calls <code>storeMetrics</code> without awaiting and never closes the writer; <code>BaseCommand._execute</code> is unchanged; <code>InfluxWriter</code> still reads <code>process.env</code> at module scope.</p>
+<p>Started 2026-11-11: the three bugs pinned by <code>todo</code> tests were fixed in PRs #9 to #11 (issues #6 to #8). Re-checked in the code after the merge: <code>index.js</code> still calls <code>storeMetrics</code> without awaiting and never closes the writer; <code>BaseCommand._execute</code> is unchanged; <code>InfluxWriter</code> still reads <code>process.env</code> at module scope.</p>
 
 <div class="wrap">
 <table>
@@ -117,12 +118,12 @@
   <tbody>
     <tr><td class="num">3</td><td><b>Influx write failure crashes the process.</b> <code>flush()</code> is not awaited; a <code>401</code> becomes an unhandled rejection and the batch is lost. No <code>close()</code>; one HTTP call per point.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
     <tr><td class="num">7</td><td><b>Make <code>InfluxWriter</code> injectable</b> (config/client via constructor). Unblocks <code>influxWriter.test.js</code>.</td><td class="sv"><span class="b warn">enabler</span></td><td class="st"><span class="b off">open</span></td><td>A</td></tr>
-    <tr><td class="num">1</td><td><b>A throwing parser crashes the whole run.</b> Callbacks run outside the Promise executor. Likely why <code>DataUsedCommand</code> is disabled.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
+    <tr><td class="num">1</td><td><b>A throwing parser crashes the whole run.</b> Callbacks run outside the Promise executor. <code>DataUsedCommand</code>'s parser is fixed (PR #11); any other parser that throws still crashes the run.</td><td class="sv"><span class="b bad">high</span></td><td class="st"><span class="b warn">half done</span></td><td>B</td></tr>
     <tr><td class="num">2</td><td><b>No default timeout.</b> One stuck <code>ping</code> piles up under the every-minute cron. Only speed test has a timeout.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
     <tr><td class="num">9</td><td><b>Commands never reject.</b> <code>onClose()</code> gets no exit code, so every <code>reject</code> branch is dead code. Pinned by <code>baseCommand.test.js</code>, which must change with the fix.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
     <tr><td class="num">4</td><td><b>Garbage points on a malformed result.</b> <code>storeMetrics(undefined, ...)</code> writes a fieldless point.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>B</td></tr>
-    <tr><td class="num">5</td><td><b><code>null</code> field values.</b> Speed test side is fixed; <code>CurlCommand</code> still writes <code>null</code>. Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b warn">half done</span></td><td>C</td></tr>
-    <tr><td class="num">10</td><td><b>Ping round-trip times keep comma decimals</b> (only loss is normalised). Pinned by a <code>todo</code> test.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
+    <tr><td class="num">5</td><td><b><code>null</code> field values.</b> Curl now omits unmatched timings (PR #9). Remainder, with #4: a result with no fields should be skipped or flagged.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b ok">done</span></td><td>done</td></tr>
+    <tr><td class="num">10</td><td><b>Ping round-trip times kept comma decimals.</b> Fixed in PR #10.</td><td class="sv"><span class="b warn">medium</span></td><td class="st"><span class="b ok">done</span></td><td>done</td></tr>
     <tr><td class="num">11</td><td><b>Impossible Ookla values stored</b> (e.g. 1,488,485,955 ms latency on 2026-10-20). Drop out-of-range values, log them, add a test with the real value.</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b off">open</span></td><td>C</td></tr>
     <tr><td class="num">8</td><td><b><code>WAN_INTERFACE</code> missing from <code>.env.template</code></b> (the <code>INFLUS_PASS</code> typo is fixed).</td><td class="sv"><span class="b info">low</span></td><td class="st"><span class="b warn">half done</span></td><td>D</td></tr>
     <tr><td class="num">6</td><td><b>Broken log rotation</b> (fixed in Phase 5).</td><td class="sv"><span class="b off">low</span></td><td class="st"><span class="b ok">done</span></td><td>n/a</td></tr>
@@ -134,9 +135,9 @@
 <div class="wp"><div class="h">A. Influx writes: #3 + #7, then <code>influxWriter.test.js</code></div>
   <div class="why">Highest severity, and the injectable constructor is what lets the writer be tested. Finishes Phase 2. Check: a wrong <code>INFLUX_PASS</code> logs an error and does not crash.</div></div>
 <div class="wp"><div class="h">B. One <code>BaseCommand</code> rewrite: #1 + #2 + #9 + #4</div>
-  <div class="why">Four defects live in the same 40 lines. Settle from the <code>exec</code> callback, wrap the parse in <code>try/catch</code>, pass the exit code, default timeout, guard on <code>metricName</code> in <code>runCommands</code>. Update <code>baseCommand.test.js</code> and the <code>dataUsedCommand</code> <code>todo</code>. Also store the Ookla failure reason (open bug).</div></div>
-<div class="wp"><div class="h">C. Small parser fixes: #5, #10, #11</div>
-  <div class="why">Each is a few lines; remove the matching <code>todo</code> marks and add the Ookla outlier test. Check: <code>yarn test</code> shows <code>todo 0</code>.</div></div>
+  <div class="why">Four defects live in the same 40 lines. Settle from the <code>exec</code> callback, wrap the parse in <code>try/catch</code>, pass the exit code, default timeout, guard on <code>metricName</code> in <code>runCommands</code>. Update <code>baseCommand.test.js</code>. Also skip or flag results without fields (the rest of #5). Also store the Ookla failure reason (open bug).</div></div>
+<div class="wp"><div class="h">C. Remaining parser fix: #11 (#5 and #10 are merged)</div>
+  <div class="why">Drop impossible Ookla values and add a test with the real 17-day latency.</div></div>
 <div class="wp"><div class="h">D. Leftovers: #8</div>
   <div class="why">Add <code>WAN_INTERFACE</code> to the template. <code>DataUsedCommand</code> stays disabled in <code>index.js</code> until you want it.</div></div>
 

@@ -131,7 +131,7 @@ The tests use the test runner that is part of Node (`node:test`). It is not nece
 * **Speed test, all steps:** `SpeedTestCommand.execute` runs with a test `speedtest` script on the `PATH`. The tests use a successful result and the real Ookla failure (exit code 2).
 * **`BaseCommand`:** The tests examine the success, error and close functions with real, simple shell commands.
 
-The tests with the **`todo`** mark are for known errors. The plan has the repair of these errors (`../docs/IMPROVEMENT_PLAN.md`, Phase 3). The test runner shows these tests with ⚠ and lists them in the summary as "failing tests". They do not cause the test run to fail. When you repair one of these errors, remove the `todo` mark from its test. Then the test makes sure that the error does not occur again. A test run is successful when the last lines show `fail 0`.
+The tests with the **`todo`** mark are for known errors. The plan has the repair of these errors (`../docs/IMPROVEMENT_PLAN.md`, Phase 3). The test runner shows these tests with ⚠ and lists them in the summary as "failing tests". They do not cause the test run to fail. When you repair one of these errors, remove the `todo` mark from its test. Then the test makes sure that the error does not occur again. A test run is successful when the last lines show `fail 0`. At this time, no test has the `todo` mark.
 
 These parts do not have unit tests yet: `InfluxWriter` and `index.js`. `InfluxWriter` reads its configuration when it is imported (plan, Phase 3 #7).
 

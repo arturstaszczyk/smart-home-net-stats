@@ -35,7 +35,7 @@ Each half has its own `.env` from its own `.env.template`. `Service/.env` serves
 
 - returns a Promise from `execute(options)` that settles in the `onClose` callback. `_execute` calls `onClose()` **without an exit code**, so the `if (error) reject(...)` branch never runs: commands always **resolve**, and failure is signalled by the error metric name (pinned in `baseCommand.test.js`);
 - resolves with the shape `{ metricName, metrics, tags }`, so a failure is still a usable metric (the error path sets `metricName` to e.g. `pingError` and emits `{count: 1}` with an `error` tag);
-- has a `parseOutput(stdout)` that regex-scrapes CLI output. These parsers are locale-sensitive and normalise comma decimal separators to dots, except `PingCommand`'s round-trip times (only its loss percentage is normalised; a `todo` test records it). `SpeedTestCommand` parses JSON, so locale doesn't apply.
+- has a `parseOutput(stdout)` that regex-scrapes CLI output. These parsers are locale-sensitive and normalise comma decimal separators to dots. They omit fields they cannot find and return `{}` for output they do not recognise, rather than throwing. `SpeedTestCommand` parses JSON, so locale doesn't apply.
 
 `index.js` holds the batch definitions as arrays of `[CommandClass, options]` pairs — `frequentCommands` (pings and curls to the router, Google, Wikipedia, wp.pl, 8.8.8.8, plus DNS checks) and `infrequentCommands` (speedtest). It picks a batch by scanning `process.argv` for the literal `frequent`/`infrequent`, runs the commands **sequentially** (so timing measurements don't contend), then writes every result to Influx.
 

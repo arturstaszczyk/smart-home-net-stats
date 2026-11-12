@@ -1,8 +1,8 @@
 # Improving smart-home-net-stats
 
-> **Status (2026-11-11, checked against `main` at `633831f`):** Phase 1 ✅ · Phase 5 ✅ (without CI) · Phase 2 🔀 done except `influxWriter.test.js` (blocked on Phase 3 #7) · Ookla speed test ✅ · DNS checks ✅ · Dashboards v2.0–v2.3 ✅ · Grafana 13.2.4 ✅ · **Phase 3 ⏳ not started (next)** · Phase 4 ⏳ not started.
+> **Status (2026-11-11, checked against `main` at `e51cdee`):** Phase 1 ✅ · Phase 5 ✅ (without CI) · Phase 2 🔀 done except `influxWriter.test.js` (blocked on Phase 3 #7) · Ookla speed test ✅ · DNS checks ✅ · Dashboards v2.0–v2.3 ✅ · Grafana 13.2.4 ✅ · **Phase 3 🔀 started: three small parser fixes merged (PRs #9–#11), the rest is next** · Phase 4 ⏳ not started.
 >
-> Everything is committed, merged into `main` and pushed: `main` equals `origin/main`, the working tree is clean, `yarn lint` is clean and `yarn test` gives 33 tests, 30 pass, 0 fail, 3 `todo`. The local branches `phase-1-esm`, `phase-5-infra`, `ookla-speedtest` and `dashboard-v2` are fully merged and can be deleted.
+> Everything is committed, merged into `main` and pushed: `main` equals `origin/main`, the working tree is clean, `yarn lint` is clean and `yarn test` gives 35 tests, 35 pass, 0 fail, 0 `todo`. The local branches `phase-1-esm`, `phase-5-infra`, `ookla-speedtest` and `dashboard-v2` are fully merged and can be deleted.
 >
 > | Work | Commit |
 > | --- | --- |
@@ -15,6 +15,9 @@
 > | Grafana 12.0.2 → 13.2.4 | `66ecf50` |
 > | Dashboard v2.2 (gauges, click-to-filter) | `1be807c` |
 > | DNS checks + dashboard v2.3 | `633831f` |
+> | Phase 3 #5, curl `null` fields (issue #6, PR #9) | `e51cdee` |
+> | Phase 3 #10, ping comma decimals (issue #8, PR #10) | `9b5fcab` |
+> | Phase 3 #1, `DataUsedCommand` parser half (issue #7, PR #11) | `a999302` |
 >
 > A visual version of this plan is in `docs/IMPROVEMENT_PLAN.html`. This Markdown file stays the source of truth; update the HTML when the status here changes.
 >
@@ -30,7 +33,7 @@
 > - **Infrastructure and Service are separate deployments**, each with its own `docker-compose.yml` and `.env`. The infrastructure host runs InfluxDB + Grafana only; the service runs only on the measuring Pis.
 > - InfluxDB port 8086 stays reachable on the LAN (the Pis need it), with **authentication enabled**.
 >
-> Remaining order: the correctness fixes the tests cover (3), then the refactor (4). Phase 2 has landed, so Phase 3 can start. Suggested order inside Phase 3: #3 + #7 (Influx writes, then `influxWriter.test.js`), then #1 + #2 + #9 + #4 (one `BaseCommand` rewrite), then the small parser fixes #5, #10, #11, then #8.
+> Remaining order: the correctness fixes the tests cover (3), then the refactor (4). Phase 2 has landed, so Phase 3 can start. Suggested order inside Phase 3: #3 + #7 (Influx writes, then `influxWriter.test.js`), then #1 + #2 + #9 + #4 (one `BaseCommand` rewrite), then #11 and #8. The small parser fixes #5 and #10 are already merged.
 
 ## Context
 
@@ -65,7 +68,7 @@ Commit `d54e90c`. No behaviour change. Verified: `yarn lint` clean, every module
 
 ## Phase 2 — Tests 🔀 (mostly done)
 
-Done 2026-10-14, commit `31b41c5` (merged into `main`). `yarn test` first ran 23 tests; with the 10 DNS tests added later it runs 33: 30 pass and 3 are `todo` for known Phase 3 bugs (`curlCommand`, `dataUsedCommand`, `pingCommand`). Verified that a deliberately broken bandwidth conversion makes the suite fail with exit code 1.
+Done 2026-10-14, commit `31b41c5` (merged into `main`). `yarn test` first ran 23 tests; with the 10 DNS tests added later it runs 33: 30 pass and 3 were `todo` for known Phase 3 bugs (`curlCommand`, `dataUsedCommand`, `pingCommand`). All three were fixed on 2026-11-11 (PRs #9–#11) and their `todo` marks removed: now 35 tests, all pass, 0 `todo`. Verified that a deliberately broken bandwidth conversion makes the suite fail with exit code 1.
 
 - ✅ `node:test` + `node:assert`, `"test": "node --test"`, zero new dependencies. Tests are excluded from the Docker image (`.dockerignore`).
 - ✅ Real fixtures in `Service/Commands/__tests__/fixtures/` (ping ok/unreachable, curl HTTPS/plain HTTP, ifconfig `lo`, an Ookla JSON result), with network-identifying values scrubbed; how each was captured is in its README. Comma-decimal variants are derived in the tests.
@@ -85,22 +88,22 @@ Use the built-in `node:test` runner and `node:assert`, so there are zero new dep
 - ⏳ `Service/Influx/__tests__/influxWriter.test.js`: inject a stub write API (see the Phase 3 constructor change) and assert tags become Influx tags and metrics become float fields.
 - ⏳ Extend the README's **Test** section: `yarn test`, how to run a single file (`node --test Commands/__tests__/pingCommand.test.js`), where the fixtures live and how to capture a new one from real CLI output, and a note that the no-match tests fail on purpose until Phase 3.
 
-## Phase 3 — Correctness fixes ⏳ (11 items: 1 done early, 2 partly)
+## Phase 3 — Correctness fixes 🔀 (11 items: 3 done, 2 partly, 6 open)
 
-Not started. Re-checked against the code on 2026-11-11: `index.js` still calls `storeMetrics` without awaiting and never closes the writer, `BaseCommand._execute` is unchanged, and `InfluxWriter` still reads `process.env` at module scope. Items #1–#5 and #7–#11 are all still open; #6 and half of #5 and #8 are done.
+Started 2026-11-11. The three bugs pinned by `todo` tests were logged as GitHub issues #6–#8 and fixed in PRs #9–#11, all merged: #5 curl `null` fields, #10 ping comma decimals, and the `DataUsedCommand` parser half of #1. Re-checked against the code after the merge: `index.js` still calls `storeMetrics` without awaiting and never closes the writer, `BaseCommand._execute` is unchanged, and `InfluxWriter` still reads `process.env` at module scope. **Done:** #5, #6, #10. **Partly:** #1, #8. **Open:** #2, #3, #4, #7, #9, #11.
 
 Each of these is a real defect, not a style preference:
 
-1. ⏳ **A throwing parser crashes the whole run.** In `Service/Commands/BaseCommand.js`, `onSuccess`/`onError` are invoked from the `exec` callback, *outside* the `new Promise` executor, so a `TypeError` in `parseOutput` becomes an uncaught exception rather than a rejection. This is the likely reason `DataUsedCommand` is commented out in `index.js`. Fix by rewriting `_execute` on top of `promisify(exec)` (or `execFile`) with `try/catch` around the parse, so a parse failure degrades to an error metric like every other failure.
+1. 🔀 **A throwing parser crashes the whole run.** *Half done: `DataUsedCommand.parseOutput` no longer throws (issue #7, PR #11, `a999302`). The general cause below is still open: any other parser that throws still crashes the run.* In `Service/Commands/BaseCommand.js`, `onSuccess`/`onError` are invoked from the `exec` callback, *outside* the `new Promise` executor, so a `TypeError` in `parseOutput` becomes an uncaught exception rather than a rejection. This is the likely reason `DataUsedCommand` is commented out in `index.js`. Fix by rewriting `_execute` on top of `promisify(exec)` (or `execFile`) with `try/catch` around the parse, so a parse failure degrades to an error metric like every other failure.
 2. ⏳ **A command that never closes hangs the run forever.** The promise settles only in the `'close'` handler, and only `SpeedTestCommand` passes a `timeout`. With cron firing `frequent` every minute, one stuck `ping` accumulates processes indefinitely. Give every command a default timeout in `BaseCommand`.
 3. ⏳ **Influx write failures are unhandled.** `influxWriter.storeMetrics` calls `this.writeAPI.flush()` without awaiting the returned promise, and `close()` is never called. *Observed on 2026-10-14:* with a wrong password, the `401 Unauthorized` surfaced as an **unhandled promise rejection that crashed the Node process** (`triggerUncaughtException`), after all points had been logged as "Writing timeseries". Make `storeMetrics` await, add a `close()` method, and have `runCommands` in `index.js` await all writes then close, with one flush for the whole batch instead of one HTTP round trip per point. Log a write failure clearly, without a crash.
 4. ⏳ **Garbage points on a malformed result.** `runCommands` pushes whatever it catches into `outputs`, then unconditionally calls `storeMetrics(output.metricName, ...)`. A non-metric throw yields `storeMetrics(undefined, undefined, undefined)` and a fieldless point. Guard on `metricName` being present and log a skip.
-5. 🔀 **`null` field values.** `CurlCommand` assigns `match && match[1]`, so a non-match writes `null` into `floatField`. Omit unmatched fields instead, and emit the `*Error` measurement when nothing parsed. *`SpeedTestCommand` is already fixed: the Ookla JSON parser omits missing values. Curl's case is pinned by a `todo` test.*
+5. ✅ **`null` field values.** `CurlCommand` now omits unmatched timings instead of writing `null`, and returns `{}` when nothing matches (issue #6, PR #9, `e51cdee`); the Ookla parser already did. *Remainder, which belongs to #4:* output with no timings still produces a `curl` result with no fields rather than a `curlError`, so `runCommands` should skip or flag results without fields.
 6. ✅ **Broken log rotation**, fixed in Phase 5 (`1321bc7`) because cron is still in use: `cron-job-smart-home` now copies `cron2.log` to `/var/log/cron2.log.bak` instead of the non-existent `/var/cron/log2.bak`.
 7. ⏳ Make `InfluxWriter`'s constructor accept its config/client so it is injectable for the Phase 2 test, rather than reading `process.env` at module scope.
 8. 🔀 **Half done.** The `INFLUS_PASS` typo in `Service/.env.template` was fixed in Phase 5, because compose now reads that same file. ⏳ Still missing: `WAN_INTERFACE` (used by `DataUsedCommand`) in the template.
 9. ⏳ **Commands never reject** *(found by the Phase 2 tests)*. `BaseCommand._execute` calls `onClose()` without the exit code, so the `if (error) reject(...)` branch in every command is dead code: a failed command resolves with its `*Error` metric. The written data is correct today, but `runCommands`' `catch` never sees a command failure, and any future code relying on rejection would silently break. Pass the exit code to `onClose`, or settle the promise from the `exec` callback (fold into #1 and the Phase 4 template method). `baseCommand.test.js` pins the current behaviour and must change with the fix.
-10. ⏳ **Ping round-trip times keep comma decimals** *(found by the Phase 2 tests)*. `PingCommand.parseOutput` normalises the loss percentage but not `min`/`avg`/`max`/`mdev`, so under a comma-decimal locale `floatField` gets `"9,028"`. Apply the same `.replace(',', '.')`. Pinned by a `todo` test.
+10. ✅ **Ping round-trip times keep comma decimals** *(found by the Phase 2 tests)*. Fixed: `min`/`avg`/`max`/`mdev` (and the loss percentage) now have every comma replaced with a dot (issue #8, PR #10, `9b5fcab`).
 11. ⏳ **Impossible Ookla values are stored as-is** *(found in real data, 2026-10-21)*. On 2026-10-20 at 17:44 Ookla reported `upload.latency.iqm` = 1,488,485,955 ms (~17 days) for `server-101`, with normal download/upload in the same test. One such value distorts every average of `uploadLatency`. In `SpeedTestCommand.parseOutput`, drop values outside plausible ranges instead of storing them (for example latencies above 60 000 ms, negative values, bandwidth above 10 Gbit/s), log what was dropped, and keep the rest of the result. Add a unit test with that real value. Clean the existing bad point in InfluxDB, or let dashboards ignore it.
 
 ## Phase 4 — Architecture ⏳
@@ -288,6 +291,8 @@ Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0,
 | --- | --- | --- |
 | The official `influxdb:1.8` image runs `CREATE DATABASE` without quoting the name, so `smart-home-db` (hyphens) fails and the service user is never created; every write gets `401`. | Phase 5 fresh-install test | Mounted init script `Infrastructure/influxdb/init/create-db-and-user.sh` (`1321bc7`) |
 | `Service/.dockerignore` didn't exclude `.env`, so images pushed to Docker Hub contained the InfluxDB password. | Phase 5 review | Excluded (`1321bc7`). ⏳ Rotate the password if those images were public. |
+| `CurlCommand` wrote `null` fields when output didn't match. | Phase 2 tests (`todo`) | Omits unmatched timings (issue #6, PR #9, `e51cdee`) |
+| `PingCommand` didn't normalise comma decimals in round-trip times (only in the loss percentage). Documentation said all parsers did. | Phase 2 tests (`todo`) | Normalised (issue #8, PR #10, `9b5fcab`) |
 | Log rotation copied to the non-existent `/var/cron/log2.bak`. | Phase 5 review | Phase 3 #6 (`1321bc7`) |
 | sivel's `speedtest-cli` under-reports a gigabit line by ~20 % (675–707 Mbit/s vs 883 from Ookla on the same machine and connection). | Comparing tools | Switched to Ookla's CLI (`ookla-speedtest`, not yet tested end to end) |
 | Speed test `null` fields when output didn't match. | Phase 2 tests | Ookla JSON parser omits missing values (Phase 3 #5, speed-test half) |
@@ -300,9 +305,7 @@ Everything found while testing on 2026-10-14 (the Phase 5 stack, dashboard v2.0,
 | --- | --- | --- | --- |
 | A failed InfluxDB write (e.g. `401`) is an unhandled promise rejection that **crashes the Node process** after logging the points as written; that batch's data is lost. | Manual run with a wrong password | High | Phase 3 #3 |
 | Commands never reject: `onClose()` gets no exit code, so every `reject` branch is dead code. | Phase 2 tests | Medium | Phase 3 #9 |
-| `PingCommand` doesn't normalise comma decimals in round-trip times (only in the loss percentage). Documentation said all parsers did. | Phase 2 tests | Medium (only under a comma-decimal locale) | Phase 3 #10 |
-| `CurlCommand` writes `null` fields when output doesn't match. | Phase 2 tests (`todo`) | Medium | Phase 3 #5 |
-| `DataUsedCommand.parseOutput` throws a `TypeError` on unrecognised output. | Phase 2 tests (`todo`) | Low while disabled | Phase 3 #1 |
+| `DataUsedCommand.parseOutput` throws a `TypeError` on unrecognised output (parser fixed in PR #11; the same crash is still possible from any other throwing parser until the `BaseCommand` rewrite). | Phase 2 tests | Low while disabled | Phase 3 #1 (general part) |
 | The migration steps in `Infrastructure/README.md` were followed on a **fresh** install; their `SET PASSWORD` set the service user's password to `haslo`, and Grafana and the service failed with `authorization failed` until it was reset by hand. | Real deployment on the dev machine | Medium (docs) | Docs follow-up under Phase 5: say the migration is only for databases created by the old scripts, and read passwords from `.env` instead of typing them. |
 | Ookla's apt repository has no Ubuntu 24.04 (noble) release (`404`), yet its install script reports success; the broken source then makes every `apt update` fail. Ookla's package also conflicts with sivel's `speedtest-cli`, which installs the same `/usr/bin/speedtest`. | Local install on Ubuntu 24.04 | Low (local runs only; the Docker image downloads the binary directly) | Docs: `Service/README.md` should give the `jammy` workaround or the static binary, and say to remove `speedtest-cli` first. |
 | Each speed test saturates the connection for ~25 s, so ping and curl results from that minute, on **every** node, show inflated latency, and the dashboard doesn't mark them. | Ookla data-cost/interference review | Low | Phase 4 scheduler: skip or tag the `frequent` batch during the node's own test. Other nodes' tests can only be shown, e.g. as Grafana annotations. |
@@ -329,7 +332,7 @@ Phase 5 checks, run on 2026-10-14 with separate compose project names and data d
 
 Still to run, for later phases:
 
-- ✅ `cd Service && yarn install && yarn lint && yarn test`, with all tests green (Phase 2). Re-run 2026-11-11: lint clean, 33 tests, 30 pass, 3 `todo`, 0 fail.
+- ✅ `cd Service && yarn install && yarn lint && yarn test`, with all tests green (Phase 2). Re-run 2026-11-11 after PRs #9–#11: lint clean, 35 tests, 35 pass, 0 fail, 0 `todo`.
 - ⏳ Error paths, which are the point of Phase 3: run with `PING_TARGETS=no-such-host.invalid` (Phase 4 adds that variable) and confirm the process does **not** crash, a `pingError` point is written, and the other commands in the batch still complete. Also confirm that a wrong `INFLUX_PASS` logs a write error without crashing.
 - ⏳ One-shot CLI mode against the Influx stack after the Phase 4 scheduler lands (`node ./index.js frequent` / `infrequent`). Then let the scheduler run ~3 minutes and confirm from `docker compose logs -f` that `frequent` fires each minute and `infrequent` fires once at `$SPEED_TEST_MINUTE`.
 - ⏳ After Phase 4, diff the measurement and field names again. They must be byte-identical, or the dashboard silently goes blank.
