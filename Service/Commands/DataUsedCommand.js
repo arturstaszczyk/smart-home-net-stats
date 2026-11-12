@@ -37,7 +37,7 @@ export default class DataUsedCommand extends BaseCommand {
 
         console.log(`Starting execution of ${commandName} command`)
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             let metricName = null
             const tags = {}
             const metrics = {}
@@ -56,15 +56,7 @@ export default class DataUsedCommand extends BaseCommand {
                     _.assign(metrics, { count: '1' })
                     console.log(`${commandName} command (ifconfig) error for interface ${inetInterface}`)
                 },
-                onClose: (error) => {
-                    const testResults = { metricName, metrics, tags }
-
-                    if (error) {
-                        reject(testResults)
-                    } else {
-                        resolve(testResults)
-                    }
-                }
+                onClose: () => resolve({ metricName, metrics, tags })
             })
         })
     }
